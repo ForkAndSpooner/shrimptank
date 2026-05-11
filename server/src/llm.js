@@ -9,9 +9,11 @@ ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
 LITERAL MODE: The product is LITERALLY "${card1.text}" combined with "${card2.text}" — do NOT invent a new product category. A stapler drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. The product IS this exact physical combination, pitched like it solves humanity's greatest crisis.
 
-One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price.
+FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — how the user holds it, wears it, sets it up, what happens when they turn it on, how it feels, what problem it solves moment-to-moment. Skip funding asks, market-size talk, and revenue projections.
 
-STRICT LIMIT: 2 sentences MAX. Under 75 words total.
+Structure: (1) Vivid description of the product in action. (2) One fake testimonial from a customer. (3) Closer with "But WAIT — there's more!" and a ridiculous price.
+
+STRICT LIMIT: 3 sentences MAX. Under 100 words total.
 
 JSON only: {"companyName":"...","tagline":"literal hook 6 words max","pitch":"..."}`,
 
@@ -24,9 +26,11 @@ ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
 CREATIVE MODE: Invent a NEW product category inspired by the cards — reinterpret, combine metaphorically, or find an unexpected angle. "${buzzWord}" is the core technology. You decide the customer. Pitch it like it's the most important invention since sliced bread.
 
-One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price.
+FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — how the user interacts with it, what it physically does, what changes for them when they use it. Skip funding asks, market-size talk, and revenue projections.
 
-STRICT LIMIT: 2 sentences MAX. Under 75 words total.
+Structure: (1) Vivid description of the product in action. (2) One fake testimonial from a customer. (3) Closer with "But WAIT — there's more!" and a ridiculous price.
+
+STRICT LIMIT: 3 sentences MAX. Under 100 words total.
 
 JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch":"..."}`,
 
@@ -39,9 +43,11 @@ ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
 UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. "${buzzWord}" amplifies the danger. Pitch it with complete earnestness.
 
-Testimonial from someone who survived. End with "But WAIT — there's more!" and a price that ignores the liability.
+FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — exactly what it does to the user, how it operates, what the dangerous experience feels like in the moment. Skip funding asks, market-size talk, and revenue projections.
 
-STRICT LIMIT: 2 sentences MAX. Under 75 words total.
+Structure: (1) Vivid description of the product in (alarming) action. (2) Testimonial from someone who survived. (3) Closer with "But WAIT — there's more!" and a price that ignores the liability.
+
+STRICT LIMIT: 3 sentences MAX. Under 100 words total.
 
 JSON only: {"companyName":"...","tagline":"alarming hook 6 words max","pitch":"..."}`,
 };
