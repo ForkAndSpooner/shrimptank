@@ -18,9 +18,12 @@ const app = express();
 // Idempotent: buzzWordRevealed acts as a "already fired" guard.
 function soloGoToVoting(roomCode, round) {
   const r = getRoom(roomCode);
-  if (!r || r.round !== round) return;
-  if (r.buzzWordRevealed) return; // already fired
-  if (!r.players.every(p => r.pitches?.[p.name])) return; // still waiting
+  const pitchKeys = Object.keys(r?.pitches || {});
+  console.log(`soloGoToVoting: room=${roomCode} round=${round} roomRound=${r?.round} revealed=${r?.buzzWordRevealed} pitches=${JSON.stringify(pitchKeys)}`);
+  if (!r || r.round !== round) { console.log("soloGoToVoting: BAIL — no room or stale round"); return; }
+  if (r.buzzWordRevealed) { console.log("soloGoToVoting: BAIL — already fired"); return; }
+  if (!r.players.every(p => r.pitches?.[p.name])) { console.log(`soloGoToVoting: BAIL — missing pitches for some players. Have: ${JSON.stringify(pitchKeys)}, need: ${JSON.stringify(r.players.map(p=>p.name))}`); return; }
+  console.log("soloGoToVoting: FIRING pitches-ready");
   revealBuzzWord(roomCode);
   const room = getRoom(roomCode);
   room.state = "voting";
@@ -152,9 +155,10 @@ io.on("connection", (socket) => {
     if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; preGeneratedPitch = null; }
     else if (typeof preGeneratedPitch === "function") { cb = preGeneratedPitch; preGeneratedPitch = null; }
     const room = getRoom(currentRoom);
-    if (!room) return;
+    console.log(`select-cards: player=${playerName} room=${currentRoom} state=${room?.state} hasPitch=${!!preGeneratedPitch} indices=${JSON.stringify(cardIndices)}`);
+    if (!room) { console.log("select-cards: BAIL — no room"); return; }
     const updated = selectCards(currentRoom, playerName, cardIndices, pitchMode);
-    if (!updated) return;
+    if (!updated) { console.log(`select-cards: BAIL — selectCards returned null (state=${room.state})`); return; }
 
     const lockedInPlayers = Object.keys(updated.selections).filter(n => n !== AI_PLAYER);
     const humanPlayers = updated.players.filter(p => !p.isAi).length;
