@@ -165,19 +165,11 @@
         <div id="mode-selector" style="display:none;" class="flex flex-col gap-3 mt-2">
           <textarea id="pitch-hint" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists')"></textarea>
           <div>
-            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style <span class="text-base-content/20">(optional)</span></p>
+            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style <span class="text-base-content/20">(optional — will pick for you)</span></p>
             <div class="grid grid-cols-3 gap-2">
               <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
               <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
               <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
-            </div>
-          </div>
-          <div>
-            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">🎭 Delivery style <span class="text-base-content/20">(optional)</span></p>
-            <div class="grid grid-cols-3 gap-2">
-              <button onclick="selectDeliveryMode('infomercial')" id="dbtn-infomercial" class="btn btn-sm" style="background:#1a5c3a; border:2px solid transparent; color:#6ee7b7;">📺 Infomercial</button>
-              <button onclick="selectDeliveryMode('siliconvalley')" id="dbtn-siliconvalley" class="btn btn-sm" style="background:#3a3a1a; border:2px solid transparent; color:#fde68a;">🚀 Tech Bro</button>
-              <button onclick="selectDeliveryMode('government')" id="dbtn-government" class="btn btn-sm" style="background:#2a2a2a; border:2px solid transparent; color:#d1d5db;">🏛️ Gov</button>
             </div>
           </div>
           <button onclick="generateFromSelections()" class="btn btn-primary w-full">⚡ Generate Pitch</button>
@@ -198,14 +190,6 @@
               <button onclick="selectRegenIdeaMode('literal')" id="ribtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
               <button onclick="selectRegenIdeaMode('creative')" id="ribtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
               <button onclick="selectRegenIdeaMode('unhinged')" id="ribtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
-            </div>
-          </div>
-          <div>
-            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">🎭 Delivery style</p>
-            <div class="grid grid-cols-3 gap-2">
-              <button onclick="selectRegenDeliveryMode('infomercial')" id="rdbtn-infomercial" class="btn btn-sm" style="background:#1a5c3a; border:2px solid transparent; color:#6ee7b7;">📺 Infomercial</button>
-              <button onclick="selectRegenDeliveryMode('siliconvalley')" id="rdbtn-siliconvalley" class="btn btn-sm" style="background:#3a3a1a; border:2px solid transparent; color:#fde68a;">🚀 Tech Bro</button>
-              <button onclick="selectRegenDeliveryMode('government')" id="rdbtn-government" class="btn btn-sm" style="background:#2a2a2a; border:2px solid transparent; color:#d1d5db;">🏛️ Gov</button>
             </div>
           </div>
           <button onclick="regenFromSelections()" class="btn btn-outline w-full">🔄 Regenerate Pitch</button>
@@ -341,9 +325,7 @@
       selectedIndices = [];
       lockedPitch = null;
       selectedIdeaMode = null;
-      selectedDeliveryMode = null;
       selectedRegenIdeaMode = null;
-      selectedRegenDeliveryMode = null;
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
       document.getElementById("mode-selector").style.display = "none";
@@ -378,26 +360,15 @@
     }
 
     let selectedIdeaMode = null;
-    let selectedDeliveryMode = null;
     let selectedRegenIdeaMode = null;
-    let selectedRegenDeliveryMode = null;
 
     const IDEA_MODES = ['literal','creative','unhinged'];
-    const DELIVERY_MODES = ['infomercial','siliconvalley','government'];
 
     function selectIdeaMode(mode) {
       selectedIdeaMode = selectedIdeaMode === mode ? null : mode;
       IDEA_MODES.forEach(m => {
         const btn = document.getElementById(`ibtn-${m}`);
         if (btn) btn.style.borderColor = m === selectedIdeaMode ? '#ffd700' : 'transparent';
-      });
-    }
-
-    function selectDeliveryMode(mode) {
-      selectedDeliveryMode = selectedDeliveryMode === mode ? null : mode;
-      DELIVERY_MODES.forEach(m => {
-        const btn = document.getElementById(`dbtn-${m}`);
-        if (btn) btn.style.borderColor = m === selectedDeliveryMode ? '#ffd700' : 'transparent';
       });
     }
 
@@ -409,31 +380,19 @@
       });
     }
 
-    function selectRegenDeliveryMode(mode) {
-      selectedRegenDeliveryMode = selectedRegenDeliveryMode === mode ? null : mode;
-      DELIVERY_MODES.forEach(m => {
-        const btn = document.getElementById(`rdbtn-${m}`);
-        if (btn) btn.style.borderColor = m === selectedRegenDeliveryMode ? '#ffd700' : 'transparent';
-      });
-    }
-
-    function _resolvePitchMode(ideaMode, deliveryMode) {
-      // If both selected, combine: idea style takes precedence for content, delivery for framing
-      // For simplicity: if delivery selected, use delivery; else use idea; else random
-      if (deliveryMode) return deliveryMode;
+    function _resolvePitchMode(ideaMode) {
       if (ideaMode) return ideaMode;
-      const all = [...IDEA_MODES, ...DELIVERY_MODES];
-      return all[Math.floor(Math.random() * all.length)];
+      return IDEA_MODES[Math.floor(Math.random() * IDEA_MODES.length)];
     }
 
     function generateFromSelections() {
-      const mode = _resolvePitchMode(selectedIdeaMode, selectedDeliveryMode);
+      const mode = _resolvePitchMode(selectedIdeaMode);
       const hint = document.getElementById("pitch-hint").value.trim();
       previewPitch(mode, hint);
     }
 
     function regenFromSelections() {
-      const mode = _resolvePitchMode(selectedRegenIdeaMode, selectedRegenDeliveryMode);
+      const mode = _resolvePitchMode(selectedRegenIdeaMode);
       const hint = document.getElementById("pitch-hint-regen").value.trim();
       previewPitch(mode, hint);
     }
@@ -501,7 +460,7 @@
       document.getElementById("voting-market").textContent = `⚡ ${room.buzzWord}`;
       const isShrimp = room.votingMode !== "players";
 
-      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged",infomercial:"📺 Infomercial",siliconvalley:"🚀 Tech Bro",government:"🏛️ Gov Contract"};
+      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged"};
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
         const cards = room.selections[pn] || [];
         const canVote = !isShrimp && pn !== myName;
