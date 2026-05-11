@@ -83,8 +83,8 @@ export function dealRound(code) {
   const room = rooms.get(code.toUpperCase());
   if (!room) return null;
   room.round++;
-  room.market = markets[Math.floor(Math.random() * markets.length)];
-  room.buzzWord = room.buzzMode ? buzzWords[Math.floor(Math.random() * buzzWords.length)] : null;
+  room.market = null;
+  room.buzzWord = buzzWords[Math.floor(Math.random() * buzzWords.length)];
   room.hands = {};
   room.selections = {};
   room.pitches = {};
