@@ -99,6 +99,18 @@ io.on("connection", (socket) => {
           ], aiMode);
           setPitch(currentRoom, aiPlayer.name, pitch);
           console.log(`AI pitch ready for round ${updated.round}`);
+        }).catch(err => {
+          console.error("AI pitch generation failed:", err.message);
+          const r = getRoom(currentRoom);
+          if (!r || r.round !== updated.round) return;
+          const hand = updated.hands[aiPlayer.name];
+          selectCards(currentRoom, aiPlayer.name, [0, 1], "literal");
+          setPitch(currentRoom, aiPlayer.name, {
+            companyName: "AlgoVentures",
+            tagline: "The Algorithm has spoken",
+            pitch: `Our platform combines "${hand[0].text}" with "${hand[1].text}" into one seamless experience. "I didn't know I needed this until I did," says one early adopter. But WAIT — there's more! Just $99/month, or your data back.`,
+          });
+          console.log(`AI fallback pitch stored for round ${updated.round}`);
         });
       }
     }
@@ -159,7 +171,14 @@ io.on("connection", (socket) => {
             goToVoting();
           }
         }, 500);
-        setTimeout(() => clearInterval(waitForAi), 20000);
+        setTimeout(() => {
+          clearInterval(waitForAi);
+          const r = getRoom(currentRoom);
+          if (r && Object.keys(r.pitches || {}).length > 0) {
+            console.log("AI timeout — forcing goToVoting with available pitches");
+            goToVoting();
+          }
+        }, 20000);
       }
     } else if (!updated.vsAi && lockedInPlayers.length >= humanPlayers) {
       // Multiplayer: pitches are pre-generated client-side; just reveal buzz word and move on.
