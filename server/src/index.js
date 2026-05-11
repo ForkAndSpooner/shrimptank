@@ -137,7 +137,7 @@ io.on("connection", (socket) => {
   socket.on("request-shrimp-verdict", async () => {
     const room = getRoom(currentRoom);
     if (!room || playerName !== room.host) return;
-    if (!["friends-family", "venture-capital", "the-sharks"].includes(room.votingMode)) return;
+    if (!["friends-family", "venture-capital", "super-briney"].includes(room.votingMode)) return;
     io.to(currentRoom).emit("shrimp-thinking");
     try {
       const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode);
