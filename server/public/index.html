@@ -102,9 +102,9 @@
         <div class="mode-name">📊 Venture Capital</div>
         <div class="mode-desc">A serious VC evaluates market size, defensibility, and unit economics</div>
       </button>
-      <button class="mode-btn" onclick="setMode('evil-tech-bro')">
-        <div class="mode-name">😈 Evil Tech Bro</div>
-        <div class="mode-desc">A condescending Silicon Valley villain roasts everyone, then picks one</div>
+      <button class="mode-btn" onclick="setMode('the-sharks')">
+        <div class="mode-name">🦈 The Sharks</div>
+        <div class="mode-desc">A mean Shark Tank panel — interrupts you, makes it personal, then grudgingly picks one</div>
       </button>
     </div>
     <div id="guest-lobby-wait" class="card" style="display:none;">
@@ -134,13 +134,25 @@
       <div class="hand" id="hand-display"></div>
       <div id="mode-selector" style="display:none; margin-top:8px;">
         <p style="color:#aaa; font-size:0.85rem; text-align:center; margin-bottom:8px;">Choose your pitch style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
+          <button onclick="previewPitch('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
+          <button onclick="previewPitch('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
+          <button onclick="previewPitch('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
+          <button onclick="previewPitch('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
+          <button onclick="previewPitch('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a; grid-column:span 2;">🏛️ Gov Contract</button>
+        </div>
+        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem;"></textarea>
+      </div>
+      <div id="pitch-preview" style="display:none; margin-top:12px;">
+        <div style="background:#0d2137; border:2px solid #1d6a8a; border-radius:10px; padding:16px; margin-bottom:10px;">
+          <div id="preview-company" style="color:#00b4d8; font-size:1.1rem; font-weight:bold;"></div>
+          <div id="preview-tagline" style="color:#ffd700; font-style:italic; font-size:0.85rem; margin:4px 0 10px;"></div>
+          <div id="preview-pitch-text" style="color:#ccc; font-size:0.9rem; line-height:1.5;"></div>
+        </div>
+        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:6px;">✅ Lock In This Pitch</button>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <button onclick="submitCards('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
-          <button onclick="submitCards('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
-          <button onclick="submitCards('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
-          <button onclick="submitCards('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
-          <button onclick="submitCards('siliconvalley')" style="font-size:0.8rem; padding:10px; background:#3a3a1a;">🚀 Silicon Valley</button>
-          <button onclick="submitCards('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a;">🏛️ Gov Contract</button>
+          <button onclick="previewPitch(currentPitchMode)" class="btn-secondary" style="font-size:0.8rem; padding:8px;">🔄 Regenerate</button>
+          <button onclick="showModeSelector()" class="btn-secondary" style="font-size:0.8rem; padding:8px;">↩ Change Mode</button>
         </div>
       </div>
       <p class="status" id="pitch-status"></p>
@@ -208,6 +220,8 @@
     }
 
     let pitchMode = "literal";
+    let currentPitchMode = "literal";
+    let lockedPitch = null;
 
     function setPitchMode(mode) { pitchMode = mode; }
 
@@ -261,10 +275,13 @@
     function showPitching(room) {
       gameRoom = room;
       selectedIndices = [];
+      lockedPitch = null;
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
       document.getElementById("mode-selector").style.display = "none";
       document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
+      document.getElementById("pitch-preview").style.display = "none";
+      document.getElementById("pitch-hint").value = "";
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
@@ -286,18 +303,59 @@
       }
       const ready = selectedIndices.length === 2;
       document.getElementById("mode-selector").style.display = ready ? "block" : "none";
+      document.getElementById("pitch-preview").style.display = "none";
+      lockedPitch = null;
       document.getElementById("pitch-status").textContent = ready
         ? "Choose your pitch style above!" : `Select ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
     }
 
-    function submitCards(mode) {
-      if (selectedIndices.length !== 2) return;
-      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = true);
-      document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
-      document.getElementById("pitch-wait-status").textContent = "Cards submitted! Generating pitches...";
-      show("waiting-pitches");
-      socket.emit("select-cards", selectedIndices, mode);
+    function showModeSelector() {
+      document.getElementById("pitch-preview").style.display = "none";
+      document.getElementById("mode-selector").style.display = "block";
+      lockedPitch = null;
     }
+
+    async function previewPitch(mode) {
+      currentPitchMode = mode;
+      const hand = gameRoom.hands[myName] || [];
+      const card1 = hand[selectedIndices[0]];
+      const card2 = hand[selectedIndices[1]];
+      const hint = document.getElementById("pitch-hint").value.trim();
+
+      document.getElementById("pitch-status").textContent = "⏳ Generating...";
+      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = true);
+
+      try {
+        const res = await fetch("/api/pitch-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ card1, card2, buzzWord: gameRoom.buzzWord, pitchMode: mode, hint: hint || null }),
+        });
+        const pitch = await res.json();
+        document.getElementById("preview-company").textContent = pitch.companyName;
+        document.getElementById("preview-tagline").textContent = `"${pitch.tagline}"`;
+        document.getElementById("preview-pitch-text").textContent = pitch.pitch;
+        document.getElementById("pitch-preview").style.display = "block";
+        document.getElementById("mode-selector").style.display = "none";
+        lockedPitch = pitch;
+        document.getElementById("pitch-status").textContent = "";
+      } catch (e) {
+        document.getElementById("pitch-status").textContent = "Error generating pitch. Try again.";
+      } finally {
+        document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
+      }
+    }
+
+    function lockInPitch() {
+      if (!lockedPitch || selectedIndices.length !== 2) return;
+      document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = true);
+      document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
+      document.getElementById("pitch-wait-status").textContent = "Pitch locked in! Waiting for others...";
+      show("waiting-pitches");
+      socket.emit("select-cards", selectedIndices, currentPitchMode, lockedPitch);
+    }
+
+    function submitCards(mode) { previewPitch(mode); } // legacy compat
 
     // VOTING
     function showVoting(room) {
