@@ -17,28 +17,30 @@ const app = express();
 // Called after either the human or AI stores their pitch in a solo round.
 // Idempotent: buzzWordRevealed acts as a "already fired" guard.
 function soloGoToVoting(roomCode, round) {
-  const r = getRoom(roomCode);
-  const pitchKeys = Object.keys(r?.pitches || {});
-  console.log(`soloGoToVoting: room=${roomCode} round=${round} roomRound=${r?.round} revealed=${r?.buzzWordRevealed} pitches=${JSON.stringify(pitchKeys)}`);
-  if (!r || r.round !== round) { console.log("soloGoToVoting: BAIL — no room or stale round"); return; }
-  if (r.buzzWordRevealed) { console.log("soloGoToVoting: BAIL — already fired"); return; }
-  if (!r.players.every(p => r.pitches?.[p.name])) { console.log(`soloGoToVoting: BAIL — missing pitches for some players. Have: ${JSON.stringify(pitchKeys)}, need: ${JSON.stringify(r.players.map(p=>p.name))}`); return; }
-  console.log("soloGoToVoting: FIRING pitches-ready");
-  revealBuzzWord(roomCode);
-  const room = getRoom(roomCode);
-  room.state = "voting";
-  io.to(roomCode).emit("pitches-ready", room);
-  if (room.votingMode !== "players") {
-    generateShrimpVerdict(room.market, room.pitches, room.votingMode, room.buzzWord)
-      .then(verdict => {
-        setShrimpVote(roomCode, verdict.votedFor, verdict.reasoning);
-        io.to(roomCode).emit("results", tallyAndFinish(roomCode));
-      })
-      .catch(() => {
-        const players = Object.keys(room.pitches);
-        setShrimpVote(roomCode, players[0], "The Shrimp had technical difficulties. Picking at random.");
-        io.to(roomCode).emit("results", tallyAndFinish(roomCode));
-      });
+  try {
+    const r = getRoom(roomCode);
+    if (!r || r.round !== round) return;
+    if (r.buzzWordRevealed) return;
+    if (!r.players.every(p => r.pitches?.[p.name])) return;
+    revealBuzzWord(roomCode);
+    const room = getRoom(roomCode);
+    if (!room) return;
+    room.state = "voting";
+    io.to(roomCode).emit("pitches-ready", room);
+    if (room.votingMode !== "players") {
+      generateShrimpVerdict(room.market, room.pitches, room.votingMode, room.buzzWord)
+        .then(verdict => {
+          setShrimpVote(roomCode, verdict.votedFor, verdict.reasoning);
+          io.to(roomCode).emit("results", tallyAndFinish(roomCode));
+        })
+        .catch(() => {
+          const players = Object.keys(room.pitches);
+          setShrimpVote(roomCode, players[0], "The Shrimp had technical difficulties. Picking at random.");
+          io.to(roomCode).emit("results", tallyAndFinish(roomCode));
+        });
+    }
+  } catch (e) {
+    console.error("soloGoToVoting error:", e.message);
   }
 }
 const server = createServer(app);
@@ -155,10 +157,17 @@ io.on("connection", (socket) => {
     if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; preGeneratedPitch = null; }
     else if (typeof preGeneratedPitch === "function") { cb = preGeneratedPitch; preGeneratedPitch = null; }
     const room = getRoom(currentRoom);
-    console.log(`select-cards: player=${playerName} room=${currentRoom} state=${room?.state} hasPitch=${!!preGeneratedPitch} indices=${JSON.stringify(cardIndices)}`);
-    if (!room) { console.log("select-cards: BAIL — no room"); return; }
+    if (!room) return;
     const updated = selectCards(currentRoom, playerName, cardIndices, pitchMode);
-    if (!updated) { console.log(`select-cards: BAIL — selectCards returned null (state=${room.state})`); return; }
+    if (!updated) {
+      // State may have already advanced (e.g. AI pitched first); still store the human's pitch.
+      if (preGeneratedPitch && currentRoom && playerName) {
+        setPitch(currentRoom, playerName, preGeneratedPitch);
+        const humanRound2 = getRoom(currentRoom)?.round;
+        soloGoToVoting(currentRoom, humanRound2);
+      }
+      return;
+    }
 
     const lockedInPlayers = Object.keys(updated.selections).filter(n => n !== AI_PLAYER);
     const humanPlayers = updated.players.filter(p => !p.isAi).length;
