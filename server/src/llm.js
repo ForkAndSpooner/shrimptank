@@ -4,26 +4,27 @@ export async function generatePitch(market, card1, card2, playerName) {
 
   if (!apiKey) return mockPitch(market, card1, card2);
 
-  const prompt = `You are a brilliant startup founder pitching on Shrimp Tank (a parody of Shark Tank). You've been given two random cards and a market. Your job is to make the MOST COMPELLING, GENUINELY CONVINCING elevator pitch possible — as if this were a real business you've spent years building.
+  const prompt = `You are pitching on Shrimp Tank. You have 30 seconds. Be the straight man — deliver this with complete conviction, zero irony.
 
 MARKET: ${market}
-CARD 1: "${card1.text}" (${card1.type})
-CARD 2: "${card2.text}" (${card2.type})
+YOUR CARDS: "${card1.text}" + "${card2.text}"
+
+Write a SHORT elevator pitch (3 sentences max) covering:
+1. The hook — one sentence that names the product and its core promise
+2. The problem + your solution — treat it as blindingly obvious that people need this
+3. The opportunity — one vague but confident market claim, then your ask
 
 Rules:
-- Combine both cards into a real product/service concept that fits the ${market} market
-- Make the STRONGEST possible case for why this idea would actually succeed — real market pain point, real customer need, real revenue logic
-- Do NOT wink at the camera or acknowledge it's absurd. Play it completely straight.
-- Name the company with a clever startup-style name (portmanteau, pun, or evocative word)
-- Write ONE tight paragraph (4-6 sentences) as the pitch — no bullet points
-- End with the ask: how much equity you want and at what valuation
-- Use confident, specific language ("$4.2B addressable market", "23% of business travelers", etc.)
+- You live in a world where this product is completely sensible. Never acknowledge it's unusual.
+- No bullet points. One tight paragraph.
+- Specific ask at the end (dollar amount + equity %)
+- Do NOT pad it. Shorter is better. If you can say it in 2 sentences, do that.
 
 Respond in JSON only:
 {
-  "companyName": "startup name",
-  "tagline": "punchy one-liner",
-  "pitch": "single paragraph elevator pitch"
+  "companyName": "clever startup name",
+  "tagline": "5 words or fewer",
+  "pitch": "the pitch paragraph"
 }`;
 
   try {
