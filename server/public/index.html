@@ -73,15 +73,6 @@
   <div id="home" class="screen active">
     <div class="card">
       <input id="player-name" placeholder="Your display name" maxlength="20">
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <button id="mode-literal" class="mode-toggle active" onclick="setPitchMode('literal')" style="flex:1; background:#533483; border:2px solid #ffd700; font-size:0.85rem; padding:10px;">
-          🔩 Literal Mode
-        </button>
-        <button id="mode-creative" class="mode-toggle" onclick="setPitchMode('creative')" style="flex:1; background:#1b2838; border:2px solid #333; font-size:0.85rem; padding:10px;">
-          ✨ Creative Mode
-        </button>
-      </div>
-      <p id="mode-desc" style="color:#aaa; font-size:0.8rem; text-align:center; margin-bottom:12px;">Cards mean exactly what they are. No metaphors.</p>
       <button onclick="createGame(false)">Start New Game</button>
       <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
       <hr class="divider">
@@ -141,7 +132,17 @@
       <div class="market-badge" id="market-display"></div>
       <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
       <div class="hand" id="hand-display"></div>
-      <button id="pitch-btn" onclick="submitCards()" disabled>🚀 Build My Pitch</button>
+      <div id="mode-selector" style="display:none; margin-top:8px;">
+        <p style="color:#aaa; font-size:0.85rem; text-align:center; margin-bottom:8px;">Choose your pitch style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <button onclick="submitCards('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
+          <button onclick="submitCards('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
+          <button onclick="submitCards('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
+          <button onclick="submitCards('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
+          <button onclick="submitCards('siliconvalley')" style="font-size:0.8rem; padding:10px; background:#3a3a1a;">🚀 Silicon Valley</button>
+          <button onclick="submitCards('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a;">🏛️ Gov Contract</button>
+        </div>
+      </div>
       <p class="status" id="pitch-status"></p>
     </div>
   </div>
@@ -207,26 +208,15 @@
     }
 
     let pitchMode = "literal";
-    const modeDescs = {
-      literal: "Cards mean exactly what they are. No metaphors.",
-      creative: "Claude interprets the cards to build the best product it can.",
-    };
 
-    function setPitchMode(mode) {
-      pitchMode = mode;
-      document.getElementById("mode-literal").style.borderColor = mode === "literal" ? "#ffd700" : "#333";
-      document.getElementById("mode-literal").style.background = mode === "literal" ? "#533483" : "#1b2838";
-      document.getElementById("mode-creative").style.borderColor = mode === "creative" ? "#ffd700" : "#333";
-      document.getElementById("mode-creative").style.background = mode === "creative" ? "#533483" : "#1b2838";
-      document.getElementById("mode-desc").textContent = modeDescs[mode];
-    }
+    function setPitchMode(mode) { pitchMode = mode; }
 
     // HOME
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
       isHost = true;
-      socket.emit("create-room", myName, vsAi, false, pitchMode, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -273,8 +263,8 @@
       selectedIndices = [];
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
-      const modeLabel = room.pitchMode === "literal" ? "🔩 Literal Mode" : "✨ Creative Mode";
-      document.getElementById("buzz-inline").textContent = `${room.buzzWord} · ${modeLabel}`;
+      document.getElementById("mode-selector").style.display = "none";
+      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
@@ -294,19 +284,19 @@
         selectedIndices.push(i);
         document.getElementById(`card-${i}`).classList.add("selected");
       }
-      const btn = document.getElementById("pitch-btn");
-      btn.disabled = selectedIndices.length !== 2;
-      document.getElementById("pitch-status").textContent = selectedIndices.length === 2
-        ? "Ready to pitch!" : `Select ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
+      const ready = selectedIndices.length === 2;
+      document.getElementById("mode-selector").style.display = ready ? "block" : "none";
+      document.getElementById("pitch-status").textContent = ready
+        ? "Choose your pitch style above!" : `Select ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
     }
 
-    function submitCards() {
+    function submitCards(mode) {
       if (selectedIndices.length !== 2) return;
-      document.getElementById("pitch-btn").disabled = true;
+      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = true);
       document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
       document.getElementById("pitch-wait-status").textContent = "Cards submitted! Generating pitches...";
       show("waiting-pitches");
-      socket.emit("select-cards", selectedIndices);
+      socket.emit("select-cards", selectedIndices, mode);
     }
 
     // VOTING
@@ -315,12 +305,14 @@
       document.getElementById("voting-market").textContent = `⚡ ${room.buzzWord}`;
       const isShrimp = room.votingMode !== "players";
 
+      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged",infomercial:"📺 Infomercial",siliconvalley:"🚀 Silicon Valley",government:"🏛️ Gov Contract"};
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
         const cards = room.selections[pn] || [];
         const canVote = !isShrimp && pn !== myName;
+        const modeUsed = room.pitchModes?.[pn];
         return `
           <div class="pitch-card">
-            <div class="pitch-player">Pitched by ${esc(pn)}</div>
+            <div class="pitch-player">Pitched by ${esc(pn)}${modeUsed ? ` <span style="color:#aaa;font-size:0.8rem;">${modeLabels[modeUsed]||""}</span>` : ""}</div>
             <div class="pitch-cards">${cards.map(c => `<span class="mini-card ${c.type}">${esc(c.text)}</span>`).join("")}</div>
             <div class="pitch-company">${esc(p.companyName)}</div>
             <div class="pitch-tagline">"${esc(p.tagline)}"</div>
