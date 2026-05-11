@@ -1,211 +1,253 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="night">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shrimp Tank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Georgia', serif; background: #0d1b2a; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-    h1 { font-size: 2.5rem; color: #00b4d8; margin-bottom: 0.2em; text-align: center; }
-    .subtitle { color: #aaa; margin-bottom: 2em; font-style: italic; text-align: center; }
+    body { font-family: 'Inter', sans-serif; }
+    h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; letter-spacing: 0.05em; color: #00b4d8; line-height: 1; }
     .screen { display: none; width: 100%; max-width: 640px; }
     .screen.active { display: block; }
-    .card { background: #1b2838; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-    input { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #333; background: #0d2137; color: #eee; font-size: 1rem; margin-bottom: 12px; font-family: inherit; }
-    button { padding: 12px 24px; border-radius: 8px; border: none; background: #00b4d8; color: #000; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; width: 100%; margin-bottom: 8px; }
-    button:hover { background: #48cae4; transform: translateY(-1px); }
-    button:disabled { background: #444; color: #888; cursor: not-allowed; transform: none; }
-    .btn-secondary { background: #1d6a8a; color: #eee; }
-    .btn-secondary:hover { background: #2a8aad; }
-    .btn-danger { background: #8b0000; color: #eee; }
-    .btn-danger:hover { background: #b22222; }
-    .room-code { font-size: 3rem; font-weight: bold; color: #00b4d8; letter-spacing: 0.3em; text-align: center; padding: 20px; background: #0d2137; border-radius: 12px; margin: 16px 0; }
-    .players { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    .player-tag { background: #1d6a8a; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; }
-    .market-badge { font-size: 1.8rem; font-weight: bold; color: #ffd700; text-align: center; padding: 16px; background: #0d2137; border-radius: 12px; margin: 12px 0; }
+
+    /* Game cards (hand) */
     .hand { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
-    .game-card { padding: 16px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; text-align: center; }
-    .game-card.object { background: #1a3a5c; }
-    .game-card.action { background: #3a1a5c; }
-    .game-card.service { background: #1a5c3a; }
-    .game-card:hover { transform: translateY(-2px); }
-    .game-card.selected { border-color: #ffd700; transform: translateY(-4px); box-shadow: 0 4px 15px rgba(255,215,0,0.3); }
-    .game-card .card-type { font-size: 0.7rem; text-transform: uppercase; color: #aaa; margin-bottom: 4px; }
-    .game-card .card-text { font-size: 1rem; font-weight: bold; }
-    .pitch-card { background: #0d2137; border: 2px solid #1d6a8a; border-radius: 12px; padding: 20px; margin-bottom: 16px; animation: slideIn 0.3s ease; }
-    .pitch-company { font-size: 1.3rem; color: #00b4d8; font-weight: bold; }
-    .pitch-tagline { color: #ffd700; font-style: italic; margin: 4px 0 12px; font-size: 0.9rem; }
-    .pitch-text { color: #ccc; line-height: 1.6; }
-    .pitch-player { color: #aaa; font-size: 0.85rem; margin-bottom: 8px; }
-    .pitch-cards { display: flex; gap: 8px; margin-bottom: 12px; }
-    .mini-card { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; }
-    .mini-card.object { background: #1a3a5c; }
-    .mini-card.action { background: #3a1a5c; }
-    .mini-card.service { background: #1a5c3a; }
-    .vote-btn { background: #1d6a8a; color: #eee; margin-top: 10px; }
-    .vote-btn:hover { background: #2a8aad; }
-    .vote-btn.voted { background: #ffd700; color: #000; }
-    .mode-btn { background: #1b2838; border: 2px solid #1d6a8a; color: #eee; padding: 16px; border-radius: 10px; margin-bottom: 10px; text-align: left; }
-    .mode-btn:hover { border-color: #00b4d8; background: #1d2f40; }
-    .mode-btn .mode-name { font-size: 1.1rem; font-weight: bold; color: #00b4d8; }
-    .mode-btn .mode-desc { font-size: 0.85rem; color: #aaa; margin-top: 4px; }
-    .winner-banner { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 16px; font-size: 1.3rem; font-weight: bold; }
+    .game-card { padding: 14px 12px; border-radius: 12px; cursor: pointer; border: 3px solid transparent; transition: all 0.18s; text-align: center; position: relative; }
+    .game-card.object  { background: linear-gradient(145deg, #0f2d4a, #1a3a5c); border-bottom: 3px solid #1d6a8a; }
+    .game-card.action  { background: linear-gradient(145deg, #2a0f4a, #3a1a5c); border-bottom: 3px solid #7c3aed; }
+    .game-card.service { background: linear-gradient(145deg, #0f3a1a, #1a5c3a); border-bottom: 3px solid #059669; }
+    .game-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+    .game-card.selected { border-color: #ffd700 !important; transform: translateY(-5px); box-shadow: 0 6px 20px rgba(255,215,0,0.35); }
+    .game-card .card-type { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 6px; font-weight: 600; }
+    .game-card .card-text { font-size: 0.95rem; font-weight: 700; color: #f3f4f6; }
+
+    /* Mini cards (pitch display) */
+    .mini-card { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .mini-card.object  { background: #1a3a5c; color: #93c5fd; }
+    .mini-card.action  { background: #3a1a5c; color: #c4b5fd; }
+    .mini-card.service { background: #1a5c3a; color: #6ee7b7; }
+
+    /* Buzz word badge */
+    .buzz-badge { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 800; font-size: 1.4rem; padding: 12px 20px; border-radius: 10px; text-align: center; width: 100%; margin: 10px 0; letter-spacing: 0.02em; }
+
+    /* Room code */
+    .room-code { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #00b4d8; letter-spacing: 0.4em; text-align: center; padding: 16px; background: #0d2137; border-radius: 12px; margin: 12px 0; }
+
+    /* Pitch card */
+    .pitch-card { background: #0d1f35; border: 1px solid #1e3a5f; border-radius: 14px; padding: 20px; margin-bottom: 14px; animation: slideIn 0.3s ease; }
+    .pitch-card.winner { border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+    .pitch-company { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; color: #38bdf8; letter-spacing: 0.03em; }
+    .pitch-tagline { color: #fbbf24; font-style: italic; margin: 2px 0 10px; font-size: 0.9rem; }
+    .pitch-text { color: #cbd5e1; line-height: 1.65; font-size: 0.92rem; }
+    .pitch-player { color: #64748b; font-size: 0.8rem; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pitch-cards { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+    /* Voting mode buttons */
+    .mode-btn { background: #0d1f35; border: 1px solid #1e3a5f; color: #e2e8f0; padding: 14px 16px; border-radius: 12px; margin-bottom: 8px; text-align: left; width: 100%; cursor: pointer; transition: all 0.15s; }
+    .mode-btn:hover { border-color: #00b4d8; background: #0f2840; transform: translateX(3px); }
+    .mode-btn .mode-name { font-size: 1rem; font-weight: 700; color: #38bdf8; }
+    .mode-btn .mode-desc { font-size: 0.8rem; color: #64748b; margin-top: 3px; }
+
+    /* Winner banner */
+    .winner-banner { background: linear-gradient(135deg, #ffd700, #f59e0b); color: #000; border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.05em; }
+
+    /* Verdict box */
+    .shrimp-verdict { background: #0d1f35; border: 2px solid #fbbf24; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .shrimp-verdict .label { color: #fbbf24; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .shrimp-verdict .text { color: #cbd5e1; font-style: italic; line-height: 1.6; }
+
+    /* Player tags */
+    .players { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .player-tag { background: #1e3a5f; color: #93c5fd; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+
+    /* Scores */
     .scores { display: flex; flex-wrap: wrap; gap: 8px; }
-    .score-tag { background: #0d2137; border: 1px solid #1d6a8a; padding: 8px 14px; border-radius: 8px; font-size: 0.9rem; }
-    .score-tag .wins { color: #ffd700; font-weight: bold; }
-    .status { text-align: center; color: #aaa; padding: 12px; }
+    .score-tag { background: #0d1f35; border: 1px solid #1e3a5f; padding: 8px 14px; border-radius: 8px; font-size: 0.9rem; }
+    .score-tag .wins { color: #fbbf24; font-weight: 700; }
+
+    /* Status / waiting */
+    .status { text-align: center; color: #64748b; padding: 12px; font-size: 0.9rem; }
     .waiting { animation: pulse 1.5s infinite; }
-    .shrimp-verdict { background: #0d2137; border: 2px solid #ffd700; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-    .shrimp-verdict .label { color: #ffd700; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 8px; }
-    .shrimp-verdict .text { color: #ccc; font-style: italic; }
-    .divider { border: none; border-top: 1px solid #333; margin: 16px 0; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Vote button */
+    .vote-btn { background: #1e3a5f; color: #93c5fd; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.15s; }
+    .vote-btn:hover { background: #2a4f7a; }
+    .vote-btn.voted { background: #ffd700; color: #000; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body>
-  <h1>🦐 Shrimp Tank</h1>
-  <p class="subtitle">Pitch terrible business ideas. Win anyway.</p>
+<body class="min-h-screen flex flex-col items-center px-4 py-8 bg-base-300">
+  <div class="mb-6 text-center">
+    <h1>🦐 Shrimp Tank</h1>
+    <p class="text-base-content/50 italic text-sm mt-1">Pitch terrible business ideas. Win anyway.</p>
+  </div>
 
   <!-- HOME -->
   <div id="home" class="screen active">
-    <div class="card">
-      <input id="player-name" placeholder="Your display name" maxlength="20">
-      <button onclick="createGame(false)">Start New Game</button>
-      <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
-      <hr class="divider">
-      <input id="join-code" placeholder="Enter room code" maxlength="4" style="text-transform:uppercase; text-align:center; font-size:1.5rem; letter-spacing:0.2em;">
-      <button class="btn-secondary" onclick="joinGame()">Join Game</button>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body gap-3">
+        <input class="input input-bordered w-full" id="player-name" placeholder="Your display name" maxlength="20">
+        <button class="btn btn-primary w-full" onclick="createGame(false)">Start New Game</button>
+        <button class="btn btn-outline w-full" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
+        <div class="divider text-base-content/30 text-xs">or join existing</div>
+        <input class="input input-bordered w-full text-center text-2xl tracking-widest uppercase" id="join-code" placeholder="ROOM" maxlength="4">
+        <button class="btn btn-outline w-full" onclick="joinGame()">Join Game</button>
+      </div>
     </div>
   </div>
 
   <!-- LOBBY -->
   <div id="lobby" class="screen">
-    <div class="card">
-      <p style="text-align:center; color:#aaa;">Share this code:</p>
-      <div class="room-code" id="display-code"></div>
-      <div class="players" id="player-list"></div>
+    <div class="card bg-base-200 shadow-xl mb-4" id="room-code-card">
+      <div class="card-body items-center gap-2">
+        <p class="text-base-content/50 text-sm">Share this code with friends:</p>
+        <div class="room-code" id="display-code"></div>
+        <div class="players" id="player-list"></div>
+      </div>
     </div>
-    <div id="host-voting-mode" class="card" style="display:none;">
-      <h3 style="margin-bottom:16px; color:#00b4d8;">Choose Voting Mode</h3>
-      <button class="mode-btn" onclick="setMode('players')">
-        <div class="mode-name">🗳️ Player Vote</div>
-        <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
-      </button>
-      <button class="mode-btn" onclick="setMode('friends-family')">
-        <div class="mode-name">🥰 Friends & Family</div>
-        <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
-      </button>
-      <button class="mode-btn" onclick="setMode('venture-capital')">
-        <div class="mode-name">📊 Venture Capital</div>
-        <div class="mode-desc">A serious VC evaluates market size, defensibility, and unit economics</div>
-      </button>
-      <button class="mode-btn" onclick="setMode('super-briney')">
-        <div class="mode-name">🧂 Super Briney</div>
-        <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, and grudging even when they pick a winner</div>
-      </button>
+    <div id="host-voting-mode" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
+      <div class="card-body gap-2">
+        <h3 class="text-primary font-bold text-lg mb-2">Choose Judging Mode</h3>
+        <button class="mode-btn" onclick="setMode('players')">
+          <div class="mode-name">🗳️ Player Vote</div>
+          <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
+        </button>
+        <button class="mode-btn" onclick="setMode('friends-family')">
+          <div class="mode-name">🥰 Friends & Family</div>
+          <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
+        </button>
+        <button class="mode-btn" onclick="setMode('venture-capital')">
+          <div class="mode-name">📊 Venture Capital</div>
+          <div class="mode-desc">Scores on customer problem, feasibility, and revenue potential</div>
+        </button>
+        <button class="mode-btn" onclick="setMode('super-briney')">
+          <div class="mode-name">🧂 Super Briney</div>
+          <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, grudging</div>
+        </button>
+      </div>
     </div>
-    <div id="guest-lobby-wait" class="card" style="display:none;">
-      <p class="status waiting">Waiting for host to set voting mode...</p>
+    <div id="guest-lobby-wait" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
+      <div class="card-body"><p class="status waiting">Waiting for host to set judging mode...</p></div>
     </div>
   </div>
 
-  <!-- DEALING / WAITING FOR ROUND -->
+  <!-- DEALING -->
   <div id="dealing" class="screen">
-    <div class="card">
-      <div id="host-deal" style="display:none;">
-        <p style="color:#aaa; text-align:center; margin-bottom:16px;">Ready for Round <span id="round-num">1</span>?</p>
-        <button onclick="dealRound()">🃏 Deal Cards</button>
-      </div>
-      <div id="guest-deal-wait" style="display:none;">
-        <p class="status waiting">Waiting for host to deal...</p>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body">
+        <div id="host-deal" style="display:none;">
+          <p class="text-base-content/50 text-center mb-4">Ready for Round <span id="round-num" class="text-primary font-bold">1</span>?</p>
+          <button class="btn btn-primary w-full" onclick="dealRound()">🃏 Deal Cards</button>
+        </div>
+        <div id="guest-deal-wait" style="display:none;">
+          <p class="status waiting">Waiting for host to deal...</p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- PITCHING (select cards) -->
+  <!-- PITCHING -->
   <div id="pitching" class="screen">
-    <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:4px;">This round's technology:</p>
-      <div class="market-badge" id="market-display"></div>
-      <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
-      <div class="hand" id="hand-display"></div>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body gap-3">
+        <p class="text-base-content/50 text-center text-sm">This round's technology:</p>
+        <div class="buzz-badge" id="market-display"></div>
+        <p class="text-base-content/40 text-center text-xs">Pick 2 cards — your product must use <strong id="buzz-inline" class="text-warning"></strong>:</p>
+        <div class="hand" id="hand-display"></div>
 
-      <!-- Mode selector: shown after 2 cards selected -->
-      <div id="mode-selector" style="display:none; margin-top:12px;">
-        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists')" style="min-height:55px; font-size:0.85rem; width:100%; margin-bottom:10px;"></textarea>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style <span style="color:#555;">(optional — will pick for you)</span>:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;" id="idea-btns">
-          <button onclick="selectIdeaMode('literal')" id="ibtn-literal" style="font-size:0.8rem; padding:10px; background:#1a3a5c; border:2px solid transparent;">🔩 Literal</button>
-          <button onclick="selectIdeaMode('creative')" id="ibtn-creative" style="font-size:0.8rem; padding:10px; background:#3a1a5c; border:2px solid transparent;">✨ Creative</button>
-          <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" style="font-size:0.8rem; padding:10px; background:#5c1a1a; border:2px solid transparent;">🤪 Unhinged</button>
+        <div id="mode-selector" style="display:none;" class="flex flex-col gap-3 mt-2">
+          <textarea id="pitch-hint" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists')"></textarea>
+          <div>
+            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style <span class="text-base-content/20">(optional)</span></p>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
+              <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
+              <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
+            </div>
+          </div>
+          <div>
+            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">🎭 Delivery style <span class="text-base-content/20">(optional)</span></p>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="selectDeliveryMode('infomercial')" id="dbtn-infomercial" class="btn btn-sm" style="background:#1a5c3a; border:2px solid transparent; color:#6ee7b7;">📺 Infomercial</button>
+              <button onclick="selectDeliveryMode('siliconvalley')" id="dbtn-siliconvalley" class="btn btn-sm" style="background:#3a3a1a; border:2px solid transparent; color:#fde68a;">🚀 Tech Bro</button>
+              <button onclick="selectDeliveryMode('government')" id="dbtn-government" class="btn btn-sm" style="background:#2a2a2a; border:2px solid transparent; color:#d1d5db;">🏛️ Gov</button>
+            </div>
+          </div>
+          <button onclick="generateFromSelections()" class="btn btn-primary w-full">⚡ Generate Pitch</button>
         </div>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style <span style="color:#555;">(optional — will pick for you)</span>:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:12px;" id="delivery-btns">
-          <button onclick="selectDeliveryMode('infomercial')" id="dbtn-infomercial" style="font-size:0.8rem; padding:10px; background:#1a5c3a; border:2px solid transparent;">📺 Infomercial</button>
-          <button onclick="selectDeliveryMode('siliconvalley')" id="dbtn-siliconvalley" style="font-size:0.8rem; padding:10px; background:#3a3a1a; border:2px solid transparent;">🚀 Tech Bro</button>
-          <button onclick="selectDeliveryMode('government')" id="dbtn-government" style="font-size:0.8rem; padding:10px; background:#2a2a2a; border:2px solid transparent;">🏛️ Gov Contract</button>
-        </div>
-        <button onclick="generateFromSelections()" style="background:#00b4d8; color:#000;">⚡ Generate Pitch</button>
-      </div>
 
-      <!-- Preview: shown after pitch generated -->
-      <div id="pitch-preview" style="display:none; margin-top:12px;">
-        <div style="background:#0d2137; border:2px solid #1d6a8a; border-radius:10px; padding:16px; margin-bottom:10px;">
-          <div id="preview-company" style="color:#00b4d8; font-size:1.1rem; font-weight:bold;"></div>
-          <div id="preview-tagline" style="color:#ffd700; font-style:italic; font-size:0.85rem; margin:4px 0 10px;"></div>
-          <div id="preview-pitch-text" style="color:#ccc; font-size:0.9rem; line-height:1.5;"></div>
+        <div id="pitch-preview" style="display:none;" class="flex flex-col gap-3 mt-2">
+          <div class="bg-base-300 rounded-xl p-4 border border-base-content/10">
+            <div id="preview-company" class="pitch-company"></div>
+            <div id="preview-tagline" class="pitch-tagline"></div>
+            <div id="preview-pitch-text" class="pitch-text"></div>
+          </div>
+          <button onclick="lockInPitch()" class="btn btn-primary w-full">✅ Lock In This Pitch</button>
+          <div class="divider text-xs text-base-content/30">or regenerate</div>
+          <textarea id="pitch-hint-regen" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder="Optional: guide the regeneration..."></textarea>
+          <div>
+            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="selectRegenIdeaMode('literal')" id="ribtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
+              <button onclick="selectRegenIdeaMode('creative')" id="ribtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
+              <button onclick="selectRegenIdeaMode('unhinged')" id="ribtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
+            </div>
+          </div>
+          <div>
+            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">🎭 Delivery style</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="selectRegenDeliveryMode('infomercial')" id="rdbtn-infomercial" class="btn btn-sm" style="background:#1a5c3a; border:2px solid transparent; color:#6ee7b7;">📺 Infomercial</button>
+              <button onclick="selectRegenDeliveryMode('siliconvalley')" id="rdbtn-siliconvalley" class="btn btn-sm" style="background:#3a3a1a; border:2px solid transparent; color:#fde68a;">🚀 Tech Bro</button>
+              <button onclick="selectRegenDeliveryMode('government')" id="rdbtn-government" class="btn btn-sm" style="background:#2a2a2a; border:2px solid transparent; color:#d1d5db;">🏛️ Gov</button>
+            </div>
+          </div>
+          <button onclick="regenFromSelections()" class="btn btn-outline w-full">🔄 Regenerate Pitch</button>
         </div>
-        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:12px;">✅ Lock In This Pitch</button>
-        <hr style="border-color:#333; margin-bottom:12px;">
-        <textarea id="pitch-hint-regen" placeholder="Optional: guide the regeneration..." style="min-height:50px; font-size:0.85rem; width:100%; margin-bottom:8px;"></textarea>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;" id="regen-idea-btns">
-          <button onclick="selectRegenIdeaMode('literal')" id="ribtn-literal" style="font-size:0.75rem; padding:8px; background:#1a3a5c; border:2px solid transparent;">🔩 Literal</button>
-          <button onclick="selectRegenIdeaMode('creative')" id="ribtn-creative" style="font-size:0.75rem; padding:8px; background:#3a1a5c; border:2px solid transparent;">✨ Creative</button>
-          <button onclick="selectRegenIdeaMode('unhinged')" id="ribtn-unhinged" style="font-size:0.75rem; padding:8px; background:#5c1a1a; border:2px solid transparent;">🤪 Unhinged</button>
-        </div>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;" id="regen-delivery-btns">
-          <button onclick="selectRegenDeliveryMode('infomercial')" id="rdbtn-infomercial" style="font-size:0.75rem; padding:8px; background:#1a5c3a; border:2px solid transparent;">📺 Infomercial</button>
-          <button onclick="selectRegenDeliveryMode('siliconvalley')" id="rdbtn-siliconvalley" style="font-size:0.75rem; padding:8px; background:#3a3a1a; border:2px solid transparent;">🚀 Tech Bro</button>
-          <button onclick="selectRegenDeliveryMode('government')" id="rdbtn-government" style="font-size:0.75rem; padding:8px; background:#2a2a2a; border:2px solid transparent;">🏛️ Gov Contract</button>
-        </div>
-        <button onclick="regenFromSelections()" style="background:#533483;">🔄 Regenerate Pitch</button>
+        <p class="status" id="pitch-status"></p>
       </div>
-      <p class="status" id="pitch-status"></p>
     </div>
   </div>
 
   <!-- WAITING FOR PITCHES -->
   <div id="waiting-pitches" class="screen">
-    <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:8px;">This round's technology:</p>
-      <div class="market-badge" id="waiting-market"></div>
-      <p class="status waiting" id="pitch-wait-status">Generating pitches...</p>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body items-center gap-3">
+        <p class="text-base-content/50 text-sm">This round's technology:</p>
+        <div class="buzz-badge" id="waiting-market"></div>
+        <p class="status waiting" id="pitch-wait-status">Generating pitches...</p>
+      </div>
     </div>
   </div>
 
   <!-- VOTING -->
   <div id="voting" class="screen">
-    <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:4px;">This round's technology:</p>
-      <div class="market-badge" id="voting-market"></div>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body items-center gap-2">
+        <p class="text-base-content/50 text-sm">This round's technology:</p>
+        <div class="buzz-badge" id="voting-market"></div>
+      </div>
     </div>
     <div id="pitches-display"></div>
     <div id="player-vote-controls" style="display:none;">
-      <div class="card">
-        <p class="status" id="vote-count-status"></p>
+      <div class="card bg-base-200 shadow-xl mb-4">
+        <div class="card-body"><p class="status" id="vote-count-status"></p></div>
       </div>
     </div>
     <div id="shrimp-controls" style="display:none;">
-      <div class="card" id="host-shrimp-btn-wrap" style="display:none;">
-        <button onclick="requestShrimpVerdict()">🦐 Ask the Shrimp</button>
+      <div class="card bg-base-200 shadow-xl mb-4" id="host-shrimp-btn-wrap" style="display:none;">
+        <div class="card-body">
+          <button class="btn btn-primary w-full" onclick="requestShrimpVerdict()">🦐 Ask the Shrimp</button>
+        </div>
       </div>
-      <div id="shrimp-thinking-msg" style="display:none;">
-        <p class="status waiting">The Shrimp is deliberating...</p>
+      <div id="shrimp-thinking-msg" style="display:none;" class="card bg-base-200 shadow-xl mb-4">
+        <div class="card-body"><p class="status waiting">The Shrimp is deliberating...</p></div>
       </div>
     </div>
   </div>
@@ -215,12 +257,14 @@
     <div id="winner-banner"></div>
     <div id="shrimp-verdict-display"></div>
     <div id="results-pitches"></div>
-    <div class="card">
-      <h3 style="margin-bottom:12px; color:#00b4d8;">Scoreboard</h3>
-      <div class="scores" id="scoreboard"></div>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body">
+        <h3 class="text-primary font-bold mb-3">Scoreboard</h3>
+        <div class="scores" id="scoreboard"></div>
+      </div>
     </div>
     <div id="host-results-controls" style="display:none;">
-      <button onclick="nextRound()">▶️ Next Round</button>
+      <button class="btn btn-primary w-full mb-2" onclick="nextRound()">▶️ Next Round</button>
     </div>
   </div>
 
