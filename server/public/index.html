@@ -854,7 +854,7 @@
         document.getElementById("preview-company").textContent = pitch.companyName;
         document.getElementById("preview-tagline").textContent = `"${pitch.tagline}"`;
         document.getElementById("preview-pitch-text").textContent = pitch.pitch;
-        document.getElementById("pitch-area").style.display = "flex";
+        document.getElementById("pitch-area").style.display = "block";
         document.getElementById("pitch-status").textContent = "";
       } catch (e) {
         document.getElementById("pitch-status").textContent = "Error generating pitch. Try again.";
