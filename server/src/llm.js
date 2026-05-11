@@ -1,6 +1,6 @@
 // Pitch modes — all delivered infomercial-style
 const PITCH_PROMPTS = {
-  literal: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Pitch Tank. Breathless energy, fake urgency, complete conviction.
+  literal: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. Breathless energy, fake urgency, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
@@ -15,7 +15,7 @@ STRICT LIMIT: 2 sentences MAX. Under 75 words total.
 
 JSON only: {"companyName":"...","tagline":"literal hook 6 words max","pitch":"..."}`,
 
-  creative: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Pitch Tank. Breathless energy, fake urgency, complete conviction.
+  creative: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. Breathless energy, fake urgency, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
@@ -30,7 +30,7 @@ STRICT LIMIT: 2 sentences MAX. Under 75 words total.
 
 JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch":"..."}`,
 
-  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Pitch Tank. No regard for safety. Breathless energy, complete conviction.
+  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. No regard for safety. Breathless energy, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
@@ -107,7 +107,7 @@ JSON only: {"votedFor":"exact player name","reasoning":"2-3 sentences in charact
 export async function generateAiOpponentPitch(market, hand, buzzWord) {
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
   const selectResult = await callClaude(
-    `Pitch Tank. Buzz: "${buzzWord}". Hand: [${handDesc}]. Pick 2 indices for the most absurd-yet-earnest combo. JSON only: {"indices":[i,j]}`,
+    `A business idea pitch game. Buzz: "${buzzWord}". Hand: [${handDesc}]. Pick 2 indices for the most absurd-yet-earnest combo. JSON only: {"indices":[i,j]}`,
     50
   );
   const card1 = selectResult ? (hand[selectResult.indices?.[0]] || hand[0]) : hand[0];
