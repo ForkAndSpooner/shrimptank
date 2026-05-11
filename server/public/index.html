@@ -339,6 +339,11 @@
 
   <script>
     const socket = io();
+    socket.onAny((event, ...args) => {
+      console.log("[socket]", event, args[0] !== undefined ? (typeof args[0] === "object" ? JSON.stringify(args[0]).slice(0, 120) : args[0]) : "");
+    });
+    socket.on("connect", () => console.log("[socket] connected id=", socket.id));
+    socket.on("disconnect", (reason) => console.log("[socket] disconnected reason=", reason));
     let myName = "", isHost = false, roomCode = "";
     let gameRoom = {};
     let selectedIndices = [];
