@@ -102,9 +102,9 @@
         <div class="mode-name">📊 Venture Capital</div>
         <div class="mode-desc">A serious VC evaluates market size, defensibility, and unit economics</div>
       </button>
-      <button class="mode-btn" onclick="setMode('the-sharks')">
-        <div class="mode-name">🦈 The Sharks</div>
-        <div class="mode-desc">A mean Shark Tank panel — interrupts you, makes it personal, then grudgingly picks one</div>
+      <button class="mode-btn" onclick="setMode('super-briney')">
+        <div class="mode-name">🧂 Super Briney</div>
+        <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, and grudging even when they pick a winner</div>
       </button>
     </div>
     <div id="guest-lobby-wait" class="card" style="display:none;">
@@ -133,15 +133,16 @@
       <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
       <div class="hand" id="hand-display"></div>
       <div id="mode-selector" style="display:none; margin-top:8px;">
+        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem; margin-bottom:8px;"></textarea>
         <p style="color:#aaa; font-size:0.85rem; text-align:center; margin-bottom:8px;">Choose your pitch style:</p>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
           <button onclick="previewPitch('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
           <button onclick="previewPitch('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
           <button onclick="previewPitch('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
           <button onclick="previewPitch('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
-          <button onclick="previewPitch('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a; grid-column:span 2;">🏛️ Gov Contract</button>
+          <button onclick="previewPitch('siliconvalley')" style="font-size:0.8rem; padding:10px; background:#3a3a1a;">🚀 Tech Bro</button>
+          <button onclick="previewPitch('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a;">🏛️ Gov Contract</button>
         </div>
-        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem;"></textarea>
       </div>
       <div id="pitch-preview" style="display:none; margin-top:12px;">
         <div style="background:#0d2137; border:2px solid #1d6a8a; border-radius:10px; padding:16px; margin-bottom:10px;">
@@ -150,7 +151,7 @@
           <div id="preview-pitch-text" style="color:#ccc; font-size:0.9rem; line-height:1.5;"></div>
         </div>
         <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:6px;">✅ Lock In This Pitch</button>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
           <button onclick="previewPitch(currentPitchMode)" class="btn-secondary" style="font-size:0.8rem; padding:8px;">🔄 Regenerate</button>
           <button onclick="showModeSelector()" class="btn-secondary" style="font-size:0.8rem; padding:8px;">↩ Change Mode</button>
         </div>
@@ -362,7 +363,7 @@
       document.getElementById("voting-market").textContent = `⚡ ${room.buzzWord}`;
       const isShrimp = room.votingMode !== "players";
 
-      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged",infomercial:"📺 Infomercial",siliconvalley:"🚀 Silicon Valley",government:"🏛️ Gov Contract"};
+      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged",infomercial:"📺 Infomercial",siliconvalley:"🚀 Tech Bro",government:"🏛️ Gov Contract"};
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
         const cards = room.selections[pn] || [];
         const canVote = !isShrimp && pn !== myName;
