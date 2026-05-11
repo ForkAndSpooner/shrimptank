@@ -132,28 +132,43 @@
       <div class="market-badge" id="market-display"></div>
       <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
       <div class="hand" id="hand-display"></div>
-      <div id="mode-selector" style="display:none; margin-top:8px;">
-        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem; margin-bottom:8px;"></textarea>
-        <p style="color:#aaa; font-size:0.85rem; text-align:center; margin-bottom:8px;">Choose your pitch style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
+      <!-- Hint + mode selector: shown after 2 cards selected -->
+      <div id="mode-selector" style="display:none; margin-top:12px;">
+        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem; width:100%; margin-bottom:10px;"></textarea>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
           <button onclick="previewPitch('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
           <button onclick="previewPitch('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
           <button onclick="previewPitch('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
+        </div>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
           <button onclick="previewPitch('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
           <button onclick="previewPitch('siliconvalley')" style="font-size:0.8rem; padding:10px; background:#3a3a1a;">🚀 Tech Bro</button>
           <button onclick="previewPitch('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a;">🏛️ Gov Contract</button>
         </div>
       </div>
+      <!-- Preview: shown after pitch generated -->
       <div id="pitch-preview" style="display:none; margin-top:12px;">
         <div style="background:#0d2137; border:2px solid #1d6a8a; border-radius:10px; padding:16px; margin-bottom:10px;">
           <div id="preview-company" style="color:#00b4d8; font-size:1.1rem; font-weight:bold;"></div>
           <div id="preview-tagline" style="color:#ffd700; font-style:italic; font-size:0.85rem; margin:4px 0 10px;"></div>
           <div id="preview-pitch-text" style="color:#ccc; font-size:0.9rem; line-height:1.5;"></div>
         </div>
-        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:6px;">✅ Lock In This Pitch</button>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
-          <button onclick="previewPitch(currentPitchMode)" class="btn-secondary" style="font-size:0.8rem; padding:8px;">🔄 Regenerate</button>
-          <button onclick="showModeSelector()" class="btn-secondary" style="font-size:0.8rem; padding:8px;">↩ Change Mode</button>
+        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:10px;">✅ Lock In This Pitch</button>
+        <!-- Inline regenerate: hint + all mode buttons -->
+        <textarea id="pitch-hint-regen" placeholder="Optional: guide the regeneration..." style="min-height:50px; font-size:0.85rem; width:100%; margin-bottom:8px;"></textarea>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Regenerate with idea style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
+          <button onclick="regenPitch('literal')" style="font-size:0.75rem; padding:8px; background:#1a3a5c;">🔩 Literal</button>
+          <button onclick="regenPitch('creative')" style="font-size:0.75rem; padding:8px; background:#3a1a5c;">✨ Creative</button>
+          <button onclick="regenPitch('unhinged')" style="font-size:0.75rem; padding:8px; background:#5c1a1a;">🤪 Unhinged</button>
+        </div>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Regenerate with delivery style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+          <button onclick="regenPitch('infomercial')" style="font-size:0.75rem; padding:8px; background:#1a5c3a;">📺 Infomercial</button>
+          <button onclick="regenPitch('siliconvalley')" style="font-size:0.75rem; padding:8px; background:#3a3a1a;">🚀 Tech Bro</button>
+          <button onclick="regenPitch('government')" style="font-size:0.75rem; padding:8px; background:#2a2a2a;">🏛️ Gov Contract</button>
         </div>
       </div>
       <p class="status" id="pitch-status"></p>
@@ -283,6 +298,7 @@
       document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
       document.getElementById("pitch-preview").style.display = "none";
       document.getElementById("pitch-hint").value = "";
+      if (document.getElementById("pitch-hint-regen")) document.getElementById("pitch-hint-regen").value = "";
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
@@ -321,9 +337,22 @@
       const card1 = hand[selectedIndices[0]];
       const card2 = hand[selectedIndices[1]];
       const hint = document.getElementById("pitch-hint").value.trim();
+      await _generatePreview(card1, card2, mode, hint);
+    }
 
+    async function regenPitch(mode) {
+      currentPitchMode = mode;
+      const hand = gameRoom.hands[myName] || [];
+      const card1 = hand[selectedIndices[0]];
+      const card2 = hand[selectedIndices[1]];
+      const hint = document.getElementById("pitch-hint-regen").value.trim();
+      await _generatePreview(card1, card2, mode, hint);
+    }
+
+    async function _generatePreview(card1, card2, mode, hint) {
       document.getElementById("pitch-status").textContent = "⏳ Generating...";
       document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = true);
+      document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = true);
 
       try {
         const res = await fetch("/api/pitch-preview", {
@@ -343,6 +372,7 @@
         document.getElementById("pitch-status").textContent = "Error generating pitch. Try again.";
       } finally {
         document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
+        document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = false);
       }
     }
 
@@ -350,12 +380,14 @@
       if (!lockedPitch || selectedIndices.length !== 2) return;
       document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = true);
       document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
-      document.getElementById("pitch-wait-status").textContent = "Pitch locked in! Waiting for others...";
+      document.getElementById("pitch-wait-status").textContent = gameRoom.vsAi
+        ? "Pitch locked in! The Algorithm is thinking..." 
+        : "Pitch locked in! Waiting for others...";
       show("waiting-pitches");
       socket.emit("select-cards", selectedIndices, currentPitchMode, lockedPitch);
     }
 
-    function submitCards(mode) { previewPitch(mode); } // legacy compat
+    function submitCards(mode) { previewPitch(mode); }
 
     // VOTING
     function showVoting(room) {
@@ -479,6 +511,10 @@
 
     socket.on("generating-pitches", () => {
       document.getElementById("pitch-wait-status").textContent = "🧠 Generating pitches...";
+    });
+
+    socket.on("ai-thinking", () => {
+      document.getElementById("pitch-wait-status").textContent = "🤖 The Algorithm is cooking up a pitch...";
     });
 
     socket.on("pitches-ready", (room) => {
