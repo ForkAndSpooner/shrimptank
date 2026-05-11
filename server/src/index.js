@@ -24,11 +24,9 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  socket.on("create-room", (name, vsAi, buzzMode, pitchMode, cb) => {
-    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; buzzMode = false; pitchMode = "literal"; }
-    else if (typeof buzzMode === "function") { cb = buzzMode; buzzMode = false; pitchMode = "literal"; }
-    else if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; }
-    const room = createRoom(name, vsAi, buzzMode, pitchMode);
+  socket.on("create-room", (name, vsAi, cb) => {
+    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; }
+    const room = createRoom(name, vsAi);
     currentRoom = room.code;
     playerName = name;
     socket.join(room.code);
@@ -63,10 +61,11 @@ io.on("connection", (socket) => {
   });
 
   // Player selects 2 cards from their hand
-  socket.on("select-cards", async (cardIndices, cb) => {
+  socket.on("select-cards", async (cardIndices, pitchMode, cb) => {
+    if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; }
     const room = getRoom(currentRoom);
     if (!room) return;
-    const updated = selectCards(currentRoom, playerName, cardIndices);
+    const updated = selectCards(currentRoom, playerName, cardIndices, pitchMode);
     if (!updated) return;
 
     const humanSelections = Object.keys(updated.selections).filter(n => n !== AI_PLAYER).length;
@@ -79,16 +78,16 @@ io.on("connection", (socket) => {
 
       const pitchPromises = updated.players.map(async p => {
         if (p.isAi) {
-          const { pitch, selections } = await generateAiOpponentPitch(updated.market, updated.hands[p.name], updated.buzzWord, updated.pitchMode);
-          // Store AI selections
+          const { pitch, selections, pitchMode: aiMode } = await generateAiOpponentPitch(updated.market, updated.hands[p.name], updated.buzzWord);
           selectCards(currentRoom, p.name, [
             updated.hands[p.name].indexOf(selections[0]),
             updated.hands[p.name].indexOf(selections[1]),
-          ]);
+          ], aiMode);
           return { playerName: p.name, pitch };
         }
         const [c1, c2] = updated.selections[p.name];
-        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, updated.pitchMode);
+        const playerPitchMode = updated.pitchModes?.[p.name] || "literal";
+        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, playerPitchMode);
         return { playerName: p.name, pitch };
       });
 
