@@ -94,6 +94,13 @@
     <div class="card bg-base-200 shadow-xl mb-4">
       <div class="card-body gap-3">
         <input class="input input-bordered w-full" id="player-name" placeholder="Your display name" maxlength="20">
+        <label class="flex items-center gap-3 cursor-pointer py-1">
+          <input type="checkbox" id="shared-hand" class="checkbox checkbox-primary">
+          <div>
+            <span class="font-semibold text-sm">Shared Hand</span>
+            <span class="text-base-content/40 text-xs block">All players get the same cards each round</span>
+          </div>
+        </label>
         <button class="btn btn-primary w-full" onclick="createGame(false)">Start New Game</button>
         <button class="btn btn-outline w-full" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
         <div class="divider text-base-content/30 text-xs">or join existing</div>
@@ -159,7 +166,7 @@
       <div class="card-body gap-3">
         <p class="text-base-content/50 text-center text-sm">This round's technology:</p>
         <div class="buzz-badge" id="market-display"></div>
-        <p class="text-base-content/40 text-center text-xs">Pick 2 cards — your product must use <strong id="buzz-inline" class="text-warning"></strong>:</p>
+        <p class="text-base-content/40 text-center text-xs">Pick 2 cards — your product must use <strong id="buzz-inline" class="text-warning"></strong>:<span id="shared-hand-label" style="display:none;" class="ml-2 badge badge-outline badge-xs">Shared Hand</span></p>
         <div class="hand" id="hand-display"></div>
 
         <div id="mode-selector" style="display:none;" class="flex flex-col gap-3 mt-2">
@@ -172,7 +179,7 @@
               <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
             </div>
           </div>
-          <button onclick="generateFromSelections()" class="btn btn-primary w-full">⚡ Generate Pitch</button>
+          <button onclick="generateFromSelections()" class="btn btn-primary w-full mt-2">⚡ Generate Pitch</button>
         </div>
 
         <div id="pitch-preview" style="display:none;" class="flex flex-col gap-3 mt-2">
@@ -277,8 +284,9 @@
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
+      const sharedHand = document.getElementById("shared-hand")?.checked || false;
       isHost = true;
-      socket.emit("create-room", myName, vsAi, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, sharedHand, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -328,6 +336,8 @@
       selectedRegenIdeaMode = null;
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
+      const sharedLabel = document.getElementById("shared-hand-label");
+      if (sharedLabel) sharedLabel.style.display = room.sharedHand ? "inline-flex" : "none";
       document.getElementById("mode-selector").style.display = "none";
       document.getElementById("mode-selector").querySelectorAll("button").forEach(b => { b.disabled = false; b.style.borderColor = 'transparent'; });
       document.getElementById("pitch-preview").style.display = "none";
