@@ -48,7 +48,7 @@ JSON only: {"companyName":"...","tagline":"alarming infomercial hook 6 words max
 
 const ALL_PROMPTS = PITCH_PROMPTS;
 
-async function callClaude(prompt, maxTokens = 512) {
+async function callClaude(prompt, maxTokens = 512, model = "claude-haiku-4-5-20251001") {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
   try {
@@ -58,7 +58,7 @@ async function callClaude(prompt, maxTokens = 512) {
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
     });
     clearTimeout(timeout);
     const data = await res.json();
@@ -96,9 +96,8 @@ ${Object.entries(pitches).map(([player, p]) => `${player} — ${p.companyName} (
 
 Pick ONE winner. JSON only: {"votedFor":"exact player name","reasoning":"2-3 sentences in character"}`;
 
-  const result = await callClaude(prompt);
+  const result = await callClaude(prompt, 512, "claude-sonnet-4-5-20250929");
   return result || mockVerdict(pitches);
-}
 
 export async function generateAiOpponentPitch(market, hand, buzzWord) {
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
