@@ -94,18 +94,15 @@
     <div class="card bg-base-200 shadow-xl mb-4">
       <div class="card-body gap-3">
         <input class="input input-bordered w-full" id="player-name" placeholder="Your display name" maxlength="20">
-        <label class="flex items-center gap-3 cursor-pointer py-1">
-          <input type="checkbox" id="shared-hand" class="checkbox checkbox-primary" checked>
-          <div>
-            <span class="font-semibold text-sm">Shared Hand</span>
-            <span class="text-base-content/40 text-xs block">All players get the same cards each round</span>
-          </div>
-        </label>
-        <button class="btn btn-primary w-full" onclick="createGame(false)">Start New Game</button>
-        <button class="btn btn-outline w-full" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
-        <div class="divider text-base-content/30 text-xs">or join existing</div>
-        <input class="input input-bordered w-full text-center text-2xl tracking-widest uppercase" id="join-code" placeholder="ROOM" maxlength="4">
-        <button class="btn btn-outline w-full" onclick="joinGame()">Join Game</button>
+        <div class="grid grid-cols-3 gap-2 mt-1">
+          <button class="btn btn-outline btn-sm" onclick="createGame(true)">🤖 Solo</button>
+          <button class="btn btn-primary btn-sm" onclick="createGame(false)">▶ Start</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleJoin()">Join</button>
+        </div>
+        <div id="join-section" style="display:none;" class="flex flex-col gap-2 pt-1">
+          <input class="input input-bordered w-full text-center text-2xl tracking-widest uppercase" id="join-code" placeholder="ROOM" maxlength="4">
+          <button class="btn btn-primary w-full" onclick="joinGame()">→ Join Game</button>
+        </div>
       </div>
     </div>
   </div>
@@ -119,29 +116,41 @@
         <div class="players" id="player-list"></div>
       </div>
     </div>
+    <div class="card bg-base-200 shadow-xl mb-4">
+      <div class="card-body gap-2 py-3">
+        <div class="flex gap-2 items-center">
+          <input class="input input-bordered input-sm flex-1" id="lobby-name" placeholder="Your name" maxlength="20">
+          <button class="btn btn-outline btn-sm" onclick="changeName()">Change Name</button>
+        </div>
+        <p class="text-xs text-base-content/30 text-center" id="name-change-status"></p>
+      </div>
+    </div>
     <div id="host-voting-mode" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
       <div class="card-body gap-2">
-        <h3 class="text-primary font-bold text-lg mb-2">Choose Judging Mode</h3>
-        <button class="mode-btn" onclick="setMode('players')">
-          <div class="mode-name">🗳️ Player Vote</div>
-          <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
-        </button>
-        <button class="mode-btn" onclick="setMode('friends-family')">
-          <div class="mode-name">🥰 Friends & Family</div>
-          <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
-        </button>
-        <button class="mode-btn" onclick="setMode('venture-capital')">
-          <div class="mode-name">📊 Venture Capital</div>
-          <div class="mode-desc">Scores on customer problem, feasibility, and revenue potential</div>
-        </button>
-        <button class="mode-btn" onclick="setMode('super-briney')">
-          <div class="mode-name">🧂 Super Briney</div>
-          <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, grudging</div>
-        </button>
+        <button id="start-game-btn" class="btn btn-primary w-full" onclick="showJudgingMode()">▶ Start Game</button>
+        <div id="judging-mode-selector" style="display:none;">
+          <h3 class="text-primary font-bold text-lg mb-2 mt-2">Choose Judging Mode</h3>
+          <button class="mode-btn" onclick="setMode('players')">
+            <div class="mode-name">🗳️ Player Vote</div>
+            <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
+          </button>
+          <button class="mode-btn" onclick="setMode('friends-family')">
+            <div class="mode-name">🥰 Friends & Family</div>
+            <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
+          </button>
+          <button class="mode-btn" onclick="setMode('venture-capital')">
+            <div class="mode-name">📊 Venture Capital</div>
+            <div class="mode-desc">Scores on customer problem, feasibility, and revenue potential</div>
+          </button>
+          <button class="mode-btn" onclick="setMode('super-briney')">
+            <div class="mode-name">🧂 Super Briney</div>
+            <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, grudging</div>
+          </button>
+        </div>
       </div>
     </div>
     <div id="guest-lobby-wait" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
-      <div class="card-body"><p class="status waiting">Waiting for host to set judging mode...</p></div>
+      <div class="card-body"><p class="status waiting">Waiting for host to start the game...</p></div>
     </div>
   </div>
 
@@ -288,12 +297,17 @@
     function setPitchMode(mode) { pitchMode = mode; }
 
     // HOME
+    function toggleJoin() {
+      const s = document.getElementById("join-section");
+      s.style.display = s.style.display === "none" ? "flex" : "none";
+      if (s.style.display !== "none") document.getElementById("join-code").focus();
+    }
+
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
-      const sharedHand = document.getElementById("shared-hand")?.checked || false;
       isHost = true;
-      socket.emit("create-room", myName, vsAi, sharedHand, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, true, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -316,10 +330,32 @@
       document.getElementById("display-code").textContent = room.code;
       document.getElementById("player-list").innerHTML = room.players
         .map(p => `<span class="player-tag">${p.name === room.host ? "👑 " : ""}${esc(p.name)}</span>`).join("");
+      document.getElementById("lobby-name").value = myName;
+      document.getElementById("name-change-status").textContent = "";
       document.getElementById("host-voting-mode").style.display = isHost ? "block" : "none";
       document.getElementById("guest-lobby-wait").style.display = isHost ? "none" : "block";
-      // Hide room code sharing UI when playing solo vs AI
-      document.getElementById("display-code").parentElement.style.display = room.vsAi ? "none" : "block";
+      document.getElementById("room-code-card").style.display = room.vsAi ? "none" : "block";
+      if (isHost) {
+        document.getElementById("start-game-btn").style.display = "block";
+        document.getElementById("judging-mode-selector").style.display = "none";
+      }
+    }
+
+    function showJudgingMode() {
+      document.getElementById("start-game-btn").style.display = "none";
+      document.getElementById("judging-mode-selector").style.display = "block";
+    }
+
+    function changeName() {
+      const newName = document.getElementById("lobby-name").value.trim();
+      const status = document.getElementById("name-change-status");
+      if (!newName || newName === myName) return;
+      socket.emit("rename-player", newName, (result) => {
+        if (result?.error) { status.textContent = result.error; return; }
+        myName = newName;
+        status.textContent = "Name updated!";
+        setTimeout(() => { status.textContent = ""; }, 2000);
+      });
     }
 
     function setMode(mode) { socket.emit("set-voting-mode", mode); }

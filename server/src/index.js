@@ -7,7 +7,7 @@ import { dirname, join } from "path";
 import {
   createRoom, joinRoom, getRoom, setVotingMode, dealRound,
   selectCards, setPitch, submitVote, setShrimpVote,
-  allVoted, tallyAndFinish, nextRound, removePlayer, AI_PLAYER
+  allVoted, tallyAndFinish, nextRound, removePlayer, renamePlayer, AI_PLAYER
 } from "./game.js";
 import { generatePitch, generateShrimpVerdict, generateAiOpponentPitch } from "./llm.js";
 
@@ -207,6 +207,15 @@ io.on("connection", (socket) => {
       const final = tallyAndFinish(currentRoom);
       io.to(currentRoom).emit("results", final);
     }
+  });
+
+  socket.on("rename-player", (newName, cb) => {
+    if (!currentRoom || !playerName) return cb && cb({ error: "Not in a room" });
+    const result = renamePlayer(currentRoom, playerName, newName.trim());
+    if (result.error) return cb && cb({ error: result.error });
+    playerName = newName.trim();
+    io.to(currentRoom).emit("room-updated", result.room);
+    if (cb) cb({ ok: true });
   });
 
   socket.on("next-round", () => {

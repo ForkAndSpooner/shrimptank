@@ -188,6 +188,17 @@ export function nextRound(code) {
   return room;
 }
 
+export function renamePlayer(code, oldName, newName) {
+  const room = rooms.get(code.toUpperCase());
+  if (!room || room.state !== "lobby") return { error: "Can only rename before the game starts" };
+  if (room.players.find(p => p.name === newName)) return { error: "Name already taken" };
+  const player = room.players.find(p => p.name === oldName);
+  if (!player) return { error: "Player not found" };
+  player.name = newName;
+  if (room.host === oldName) room.host = newName;
+  return { room };
+}
+
 export function removePlayer(code, playerName) {
   const room = rooms.get(code.toUpperCase());
   if (!room) return null;
