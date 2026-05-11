@@ -73,6 +73,10 @@
   <div id="home" class="screen active">
     <div class="card">
       <input id="player-name" placeholder="Your display name" maxlength="20">
+      <label style="display:flex; align-items:center; gap:10px; color:#aaa; margin-bottom:12px; cursor:pointer;">
+        <input type="checkbox" id="buzz-mode" style="width:auto; margin:0;"> 
+        <span>⚡ Buzz Mode <span style="font-size:0.8rem;">(adds a tech buzzword each round)</span></span>
+      </label>
       <button onclick="createGame(false)">Start New Game</button>
       <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
       <hr class="divider">
@@ -94,17 +98,17 @@
         <div class="mode-name">🗳️ Player Vote</div>
         <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
       </button>
-      <button class="mode-btn" onclick="setMode('serious-shrimp')">
-        <div class="mode-name">📊 Serious Shrimp</div>
-        <div class="mode-desc">The AI evaluates like a real VC — market size, feasibility, ROI</div>
+      <button class="mode-btn" onclick="setMode('friends-family')">
+        <div class="mode-name">🥰 Friends & Family</div>
+        <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
       </button>
-      <button class="mode-btn" onclick="setMode('silly-shrimp')">
-        <div class="mode-name">🤪 Silly Shrimp</div>
-        <div class="mode-desc">The AI picks the most absurd and chaotic pitch</div>
+      <button class="mode-btn" onclick="setMode('venture-capital')">
+        <div class="mode-name">📊 Venture Capital</div>
+        <div class="mode-desc">A serious VC evaluates market size, defensibility, and unit economics</div>
       </button>
-      <button class="mode-btn" onclick="setMode('mean-shrimp')">
-        <div class="mode-name">😈 Mean Shrimp</div>
-        <div class="mode-desc">The AI roasts everyone mercilessly, then reluctantly picks one</div>
+      <button class="mode-btn" onclick="setMode('evil-tech-bro')">
+        <div class="mode-name">😈 Evil Tech Bro</div>
+        <div class="mode-desc">A condescending Silicon Valley villain roasts everyone, then picks one</div>
       </button>
     </div>
     <div id="guest-lobby-wait" class="card" style="display:none;">
@@ -201,8 +205,9 @@
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
+      const buzzMode = document.getElementById("buzz-mode").checked;
       isHost = true;
-      socket.emit("create-room", myName, vsAi, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, buzzMode, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -247,7 +252,8 @@
     function showPitching(room) {
       gameRoom = room;
       selectedIndices = [];
-      document.getElementById("market-display").textContent = `🏢 ${room.market}`;
+      const buzzHtml = room.buzzWord ? `<div style="text-align:center; color:#e94560; font-size:0.9rem; margin-top:6px;">⚡ Buzz: <strong>${esc(room.buzzWord)}</strong></div>` : "";
+      document.getElementById("market-display").innerHTML = `🏢 ${esc(room.market)}${buzzHtml}`;
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
@@ -276,7 +282,8 @@
     function submitCards() {
       if (selectedIndices.length !== 2) return;
       document.getElementById("pitch-btn").disabled = true;
-      document.getElementById("waiting-market").textContent = `🏢 ${gameRoom.market}`;
+      const buzzHtml = gameRoom.buzzWord ? ` <span style="color:#e94560; font-size:0.85rem;">⚡ ${esc(gameRoom.buzzWord)}</span>` : "";
+      document.getElementById("waiting-market").innerHTML = `🏢 ${esc(gameRoom.market)}${buzzHtml}`;
       document.getElementById("pitch-wait-status").textContent = "Cards submitted! Generating pitches...";
       show("waiting-pitches");
       socket.emit("select-cards", selectedIndices);
@@ -285,7 +292,8 @@
     // VOTING
     function showVoting(room) {
       gameRoom = room;
-      document.getElementById("voting-market").textContent = `🏢 ${room.market}`;
+      const buzzHtml = room.buzzWord ? ` <span style="color:#e94560; font-size:0.85rem;">⚡ ${esc(room.buzzWord)}</span>` : "";
+      document.getElementById("voting-market").innerHTML = `🏢 ${esc(room.market)}${buzzHtml}`;
       const isShrimp = room.votingMode !== "players";
 
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
