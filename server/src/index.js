@@ -7,9 +7,9 @@ import { dirname, join } from "path";
 import {
   createRoom, joinRoom, getRoom, setVotingMode, dealRound,
   selectCards, setPitch, submitVote, setShrimpVote,
-  allVoted, tallyAndFinish, nextRound, removePlayer
+  allVoted, tallyAndFinish, nextRound, removePlayer, AI_PLAYER
 } from "./game.js";
-import { generatePitch, generateShrimpVerdict } from "./llm.js";
+import { generatePitch, generateShrimpVerdict, generateAiOpponentPitch } from "./llm.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -24,8 +24,10 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  socket.on("create-room", (name, cb) => {
-    const room = createRoom(name);
+  socket.on("create-room", (name, vsAi, cb) => {
+    // support old signature create-room(name, cb)
+    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; }
+    const room = createRoom(name, vsAi);
     currentRoom = room.code;
     playerName = name;
     socket.join(room.code);
@@ -56,38 +58,42 @@ io.on("connection", (socket) => {
     if (!room || playerName !== room.host) return;
     const updated = dealRound(currentRoom);
     if (!updated) return;
-    // Send each player only their own hand
-    for (const p of updated.players) {
-      const playerSocket = [...io.sockets.sockets.values()].find(s => {
-        // We need to track socket->player mapping; emit to room and let client filter
-      });
-    }
-    // Emit full room state but clients will only show their own hand
     io.to(currentRoom).emit("round-dealt", updated);
   });
 
   // Player selects 2 cards from their hand
-  socket.on("select-cards", (cardIndices, cb) => {
+  socket.on("select-cards", async (cardIndices, cb) => {
     const room = getRoom(currentRoom);
     if (!room) return;
     const updated = selectCards(currentRoom, playerName, cardIndices);
     if (!updated) return;
-    io.to(currentRoom).emit("player-selected", { playerName, count: Object.keys(updated.selections).length, total: updated.players.length });
 
-    // When all players have selected, generate pitches
-    if (Object.keys(updated.selections).length >= updated.players.length) {
+    const humanSelections = Object.keys(updated.selections).filter(n => n !== AI_PLAYER).length;
+    const humanPlayers = updated.players.filter(p => !p.isAi).length;
+    io.to(currentRoom).emit("player-selected", { playerName, count: humanSelections, total: humanPlayers });
+
+    // If all humans have selected, generate all pitches (including AI)
+    if (humanSelections >= humanPlayers) {
       io.to(currentRoom).emit("generating-pitches");
-      const pitchPromises = updated.players.map(p => {
-        const [c1, c2] = updated.selections[p.name];
-        return generatePitch(updated.market, c1, c2, p.name).then(pitch => ({ playerName: p.name, pitch }));
-      });
-      Promise.all(pitchPromises).then(results => {
-        for (const { playerName: pn, pitch } of results) {
-          setPitch(currentRoom, pn, pitch);
+
+      const pitchPromises = updated.players.map(async p => {
+        if (p.isAi) {
+          const { pitch, selections } = await generateAiOpponentPitch(updated.market, updated.hands[p.name]);
+          // Store AI selections
+          selectCards(currentRoom, p.name, [
+            updated.hands[p.name].indexOf(selections[0]),
+            updated.hands[p.name].indexOf(selections[1]),
+          ]);
+          return { playerName: p.name, pitch };
         }
-        const final = getRoom(currentRoom);
-        io.to(currentRoom).emit("pitches-ready", final);
+        const [c1, c2] = updated.selections[p.name];
+        const pitch = await generatePitch(updated.market, c1, c2, p.name);
+        return { playerName: p.name, pitch };
       });
+
+      const results = await Promise.all(pitchPromises);
+      for (const { playerName: pn, pitch } of results) setPitch(currentRoom, pn, pitch);
+      io.to(currentRoom).emit("pitches-ready", getRoom(currentRoom));
     }
     if (cb) cb({ ok: true });
   });
