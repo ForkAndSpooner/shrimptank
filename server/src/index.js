@@ -75,6 +75,23 @@ io.on("connection", (socket) => {
     const updated = dealRound(currentRoom);
     if (!updated) return;
     io.to(currentRoom).emit("round-dealt", updated);
+
+    // If vs AI: start generating AI pitch immediately in background
+    if (updated.vsAi) {
+      const aiPlayer = updated.players.find(p => p.isAi);
+      if (aiPlayer) {
+        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], updated.buzzWord).then(({ pitch, selections, pitchMode: aiMode }) => {
+          const r = getRoom(currentRoom);
+          if (!r || r.round !== updated.round) return; // stale round
+          selectCards(currentRoom, aiPlayer.name, [
+            updated.hands[aiPlayer.name].indexOf(selections[0]),
+            updated.hands[aiPlayer.name].indexOf(selections[1]),
+          ], aiMode);
+          setPitch(currentRoom, aiPlayer.name, pitch);
+          console.log(`AI pitch ready for round ${updated.round}`);
+        });
+      }
+    }
   });
 
   // Player selects 2 cards from their hand
@@ -95,35 +112,47 @@ io.on("connection", (socket) => {
       setPitch(currentRoom, playerName, preGeneratedPitch);
     }
 
-    // If vs AI: start AI pitch generation in background immediately
+    // If vs AI: AI pitch was pre-generated at deal time, just check if ready
     if (updated.vsAi && humanSelections >= humanPlayers) {
-      const aiPlayer = updated.players.find(p => p.isAi);
-      if (aiPlayer) {
+      const final = getRoom(currentRoom);
+      const allReady = final.players.every(p => final.pitches?.[p.name]);
+      if (allReady) {
+        final.state = "voting";
+        io.to(currentRoom).emit("pitches-ready", final);
+        if (final.votingMode !== "players") {
+          generateShrimpVerdict(final.market, final.pitches, final.votingMode).then(verdict => {
+            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
+            io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
+          }).catch(() => {
+            const players = Object.keys(final.pitches);
+            setShrimpVote(currentRoom, players[0], "Technical difficulties.");
+            io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
+          });
+        }
+      } else {
+        // AI still generating — wait for it
         io.to(currentRoom).emit("ai-thinking");
-        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], updated.buzzWord).then(({ pitch, selections, pitchMode: aiMode }) => {
-          selectCards(currentRoom, aiPlayer.name, [
-            updated.hands[aiPlayer.name].indexOf(selections[0]),
-            updated.hands[aiPlayer.name].indexOf(selections[1]),
-          ], aiMode);
-          setPitch(currentRoom, aiPlayer.name, pitch);
-          const final = getRoom(currentRoom);
-          // Auto-trigger judging once both pitches are ready
-          if (Object.keys(final.pitches).length >= final.players.length) {
-            final.state = "voting";
-            io.to(currentRoom).emit("pitches-ready", final);
-            // Auto-judge for vs AI games
-            if (final.vsAi && final.votingMode !== "players") {
-              generateShrimpVerdict(final.market, final.pitches, final.votingMode).then(verdict => {
+        const waitForAi = setInterval(() => {
+          const r = getRoom(currentRoom);
+          if (!r) { clearInterval(waitForAi); return; }
+          if (r.players.every(p => r.pitches?.[p.name])) {
+            clearInterval(waitForAi);
+            r.state = "voting";
+            io.to(currentRoom).emit("pitches-ready", r);
+            if (r.votingMode !== "players") {
+              generateShrimpVerdict(r.market, r.pitches, r.votingMode).then(verdict => {
                 setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
                 io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
               }).catch(() => {
-                const players = Object.keys(final.pitches);
+                const players = Object.keys(r.pitches);
                 setShrimpVote(currentRoom, players[0], "Technical difficulties.");
                 io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
               });
             }
           }
-        });
+        }, 500);
+        // Safety timeout after 20s
+        setTimeout(() => clearInterval(waitForAi), 20000);
       }
     } else if (!updated.vsAi && humanSelections >= humanPlayers) {
       // Multiplayer: generate any missing pitches
