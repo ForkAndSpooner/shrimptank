@@ -33,7 +33,7 @@ function drawCards(n) {
 
 export const AI_PLAYER = "🤖 The Algorithm";
 
-export function createRoom(hostName, vsAi = false) {
+export function createRoom(hostName, vsAi = false, sharedHand = false) {
   const code = generateRoomCode();
   const players = [{ name: hostName }];
   if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
@@ -44,11 +44,13 @@ export function createRoom(hostName, vsAi = false) {
     host: hostName,
     players,
     vsAi,
+    sharedHand,
     votingMode: null,
     market: null,
     buzzWord: null,
     hands: {},
     selections: {},
+    pitchModes: {},
     pitches: {},
     votes: {},
     shrimpVote: null,
@@ -89,12 +91,21 @@ export function dealRound(code) {
   room.buzzWord = buzzWords[Math.floor(Math.random() * buzzWords.length)];
   room.hands = {};
   room.selections = {};
+  room.pitchModes = {};
   room.pitches = {};
   room.votes = {};
   room.shrimpVote = null;
-  for (const p of room.players) {
-    room.hands[p.name] = drawCards(7);
+
+  if (room.sharedHand) {
+    // Shared hand: 6 + ceil(players/2) cards, same for everyone
+    const n = 6 + Math.ceil(room.players.length / 2);
+    const shared = drawCards(n);
+    for (const p of room.players) room.hands[p.name] = shared;
+  } else {
+    // Private hand: fixed 7 cards (3 obj + 2 svc + 2 action)
+    for (const p of room.players) room.hands[p.name] = drawCards(7);
   }
+
   room.state = "pitching";
   return room;
 }
