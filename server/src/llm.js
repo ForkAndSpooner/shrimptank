@@ -98,6 +98,7 @@ Pick ONE winner. JSON only: {"votedFor":"exact player name","reasoning":"2-3 sen
 
   const result = await callClaude(prompt, 512, "claude-sonnet-4-5-20250929");
   return result || mockVerdict(pitches);
+}
 
 export async function generateAiOpponentPitch(market, hand, buzzWord) {
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
