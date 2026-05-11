@@ -13,6 +13,31 @@ import { generatePitch, generateShrimpVerdict, generateAiOpponentPitch } from ".
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+// Called after either the human or AI stores their pitch in a solo round.
+// Idempotent: buzzWordRevealed acts as a "already fired" guard.
+function soloGoToVoting(roomCode, round) {
+  const r = getRoom(roomCode);
+  if (!r || r.round !== round) return;
+  if (r.buzzWordRevealed) return; // already fired
+  if (!r.players.every(p => r.pitches?.[p.name])) return; // still waiting
+  revealBuzzWord(roomCode);
+  const room = getRoom(roomCode);
+  room.state = "voting";
+  io.to(roomCode).emit("pitches-ready", room);
+  if (room.votingMode !== "players") {
+    generateShrimpVerdict(room.market, room.pitches, room.votingMode, room.buzzWord)
+      .then(verdict => {
+        setShrimpVote(roomCode, verdict.votedFor, verdict.reasoning);
+        io.to(roomCode).emit("results", tallyAndFinish(roomCode));
+      })
+      .catch(() => {
+        const players = Object.keys(room.pitches);
+        setShrimpVote(roomCode, players[0], "The Shrimp had technical difficulties. Picking at random.");
+        io.to(roomCode).emit("results", tallyAndFinish(roomCode));
+      });
+  }
+}
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
@@ -90,27 +115,33 @@ io.on("connection", (socket) => {
     if (updated.vsAi) {
       const aiPlayer = updated.players.find(p => p.isAi);
       if (aiPlayer) {
-        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], null).then(({ pitch, selections, pitchMode: aiMode }) => {
+        const aiRound = updated.round;
+        const aiHand = updated.hands[aiPlayer.name];
+        generateAiOpponentPitch(updated.market, aiHand, null).then(({ pitch, selections, pitchMode: aiMode }) => {
           const r = getRoom(currentRoom);
-          if (!r || r.round !== updated.round) return; // stale round
+          if (!r || r.round !== aiRound) return; // stale round
           selectCards(currentRoom, aiPlayer.name, [
-            updated.hands[aiPlayer.name].indexOf(selections[0]),
-            updated.hands[aiPlayer.name].indexOf(selections[1]),
+            aiHand.indexOf(selections[0]),
+            aiHand.indexOf(selections[1]),
           ], aiMode);
           setPitch(currentRoom, aiPlayer.name, pitch);
-          console.log(`AI pitch ready for round ${updated.round}`);
+          console.log(`AI pitch ready for round ${aiRound}`);
+          soloGoToVoting(currentRoom, aiRound); // fire if human is already done
         }).catch(err => {
           console.error("AI pitch generation failed:", err.message);
           const r = getRoom(currentRoom);
-          if (!r || r.round !== updated.round) return;
-          const hand = updated.hands[aiPlayer.name];
-          selectCards(currentRoom, aiPlayer.name, [0, 1], "literal");
+          if (!r || r.round !== aiRound) return;
+          const room2 = getRoom(currentRoom);
+          if (room2 && room2.state === "pitching") {
+            selectCards(currentRoom, aiPlayer.name, [0, 1], "literal");
+          }
           setPitch(currentRoom, aiPlayer.name, {
             companyName: "AlgoVentures",
             tagline: "The Algorithm has spoken",
-            pitch: `Our platform combines "${hand[0].text}" with "${hand[1].text}" into one seamless experience. "I didn't know I needed this until I did," says one early adopter. But WAIT — there's more! Just $99/month, or your data back.`,
+            pitch: `Our platform combines "${aiHand[0].text}" with "${aiHand[1].text}" into one seamless experience. "I didn't know I needed this until I did," says one early adopter. But WAIT — there's more! Just $99/month, or your data back.`,
           });
-          console.log(`AI fallback pitch stored for round ${updated.round}`);
+          console.log(`AI fallback pitch stored for round ${aiRound}`);
+          soloGoToVoting(currentRoom, aiRound); // fire if human is already done
         });
       }
     }
@@ -141,43 +172,30 @@ io.on("connection", (socket) => {
 
     // Once all human players are locked in, transition to voting and reveal the buzz word.
     if (updated.vsAi && lockedInPlayers.length >= humanPlayers) {
-      const final = getRoom(currentRoom);
-      const allReady = final.players.every(p => final.pitches?.[p.name]);
-      const goToVoting = () => {
-        revealBuzzWord(currentRoom);
-        const r = getRoom(currentRoom);
-        r.state = "voting";
-        io.to(currentRoom).emit("pitches-ready", r);
-        if (r.votingMode !== "players") {
-          generateShrimpVerdict(r.market, r.pitches, r.votingMode, r.buzzWord).then(verdict => {
-            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
-            io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
-          }).catch(() => {
-            const players = Object.keys(r.pitches);
-            setShrimpVote(currentRoom, players[0], "Technical difficulties.");
-            io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
-          });
-        }
-      };
-      if (allReady) {
-        goToVoting();
-      } else {
+      const humanRound = getRoom(currentRoom)?.round;
+      // Try immediately (fires if AI is already done); AI will call soloGoToVoting when it finishes.
+      soloGoToVoting(currentRoom, humanRound);
+      // If AI hasn't finished yet, show the "thinking" indicator and set a hard timeout.
+      const r2 = getRoom(currentRoom);
+      if (r2 && !r2.buzzWordRevealed) {
         io.to(currentRoom).emit("ai-thinking");
-        const waitForAi = setInterval(() => {
-          const r = getRoom(currentRoom);
-          if (!r) { clearInterval(waitForAi); return; }
-          if (r.players.every(p => r.pitches?.[p.name])) {
-            clearInterval(waitForAi);
-            goToVoting();
-          }
-        }, 500);
         setTimeout(() => {
-          clearInterval(waitForAi);
-          const r = getRoom(currentRoom);
-          if (r && Object.keys(r.pitches || {}).length > 0) {
-            console.log("AI timeout — forcing goToVoting with available pitches");
-            goToVoting();
+          const r3 = getRoom(currentRoom);
+          if (!r3 || r3.buzzWordRevealed) return; // already resolved
+          console.log("AI hard timeout — forcing soloGoToVoting");
+          // Force AI pitch if still missing so soloGoToVoting can fire
+          if (!r3.pitches?.[AI_PLAYER]) {
+            const aiP = r3.players.find(p => p.isAi);
+            if (aiP) {
+              const hand = r3.hands[aiP.name] || [];
+              setPitch(currentRoom, aiP.name, {
+                companyName: "AlgoVentures",
+                tagline: "The Algorithm has spoken",
+                pitch: `Our platform combines "${hand[0]?.text || "ideas"}" with "${hand[1]?.text || "innovation"}". But WAIT — there's more! Just $99/month.`,
+              });
+            }
           }
+          soloGoToVoting(currentRoom, humanRound);
         }, 20000);
       }
     } else if (!updated.vsAi && lockedInPlayers.length >= humanPlayers) {
