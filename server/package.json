@@ -1,0 +1,15 @@
+{
+  "name": "shrimptank-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "socket.io": "4.8.1",
+    "cors": "2.8.5",
+    "nanoid": "5.0.9"
+  }
+}
