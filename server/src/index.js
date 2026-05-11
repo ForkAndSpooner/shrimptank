@@ -90,32 +90,56 @@ io.on("connection", (socket) => {
     const humanPlayers = updated.players.filter(p => !p.isAi).length;
     io.to(currentRoom).emit("player-selected", { playerName, count: humanSelections, total: humanPlayers });
 
-    // If all humans have selected, generate all pitches (including AI)
-    if (humanSelections >= humanPlayers) {
-      io.to(currentRoom).emit("generating-pitches");
+    // Store the human's pre-generated pitch immediately
+    if (preGeneratedPitch) {
+      setPitch(currentRoom, playerName, preGeneratedPitch);
+    }
 
-      const pitchPromises = updated.players.map(async p => {
-        if (p.isAi) {
-          const { pitch, selections, pitchMode: aiMode } = await generateAiOpponentPitch(updated.market, updated.hands[p.name], updated.buzzWord);
-          selectCards(currentRoom, p.name, [
-            updated.hands[p.name].indexOf(selections[0]),
-            updated.hands[p.name].indexOf(selections[1]),
+    // If vs AI: start AI pitch generation in background immediately
+    if (updated.vsAi && humanSelections >= humanPlayers) {
+      const aiPlayer = updated.players.find(p => p.isAi);
+      if (aiPlayer) {
+        io.to(currentRoom).emit("ai-thinking");
+        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], updated.buzzWord).then(({ pitch, selections, pitchMode: aiMode }) => {
+          selectCards(currentRoom, aiPlayer.name, [
+            updated.hands[aiPlayer.name].indexOf(selections[0]),
+            updated.hands[aiPlayer.name].indexOf(selections[1]),
           ], aiMode);
-          return { playerName: p.name, pitch };
-        }
-        const [c1, c2] = updated.selections[p.name];
-        const playerPitchMode = updated.pitchModes?.[p.name] || "literal";
-        // Use pre-generated pitch if this is the submitting player and one was provided
-        const pitch = (p.name === playerName && preGeneratedPitch)
-          ? preGeneratedPitch
-          : await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, playerPitchMode);
+          setPitch(currentRoom, aiPlayer.name, pitch);
+          const final = getRoom(currentRoom);
+          // Auto-trigger judging once both pitches are ready
+          if (Object.keys(final.pitches).length >= final.players.length) {
+            final.state = "voting";
+            io.to(currentRoom).emit("pitches-ready", final);
+            // Auto-judge for vs AI games
+            if (final.vsAi && final.votingMode !== "players") {
+              generateShrimpVerdict(final.market, final.pitches, final.votingMode).then(verdict => {
+                setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
+                io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
+              }).catch(() => {
+                const players = Object.keys(final.pitches);
+                setShrimpVote(currentRoom, players[0], "Technical difficulties.");
+                io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
+              });
+            }
+          }
+        });
+      }
+    } else if (!updated.vsAi && humanSelections >= humanPlayers) {
+      // Multiplayer: generate any missing pitches
+      io.to(currentRoom).emit("generating-pitches");
+      const pitchPromises = updated.players.map(async p => {
+        if (updated.pitches?.[p.name]) return { playerName: p.name, pitch: updated.pitches[p.name] };
+        const [c1, c2] = updated.selections[p.name] || [];
+        if (!c1) return null;
+        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, updated.pitchModes?.[p.name] || "literal");
         return { playerName: p.name, pitch };
       });
-
-      const results = await Promise.all(pitchPromises);
+      const results = (await Promise.all(pitchPromises)).filter(Boolean);
       for (const { playerName: pn, pitch } of results) setPitch(currentRoom, pn, pitch);
       io.to(currentRoom).emit("pitches-ready", getRoom(currentRoom));
     }
+
     if (cb) cb({ ok: true });
   });
 
