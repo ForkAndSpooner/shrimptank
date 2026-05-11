@@ -28,23 +28,28 @@ function drawCards(n) {
   return deck.slice(0, n);
 }
 
-export function createRoom(hostName) {
+export const AI_PLAYER = "🤖 The Algorithm";
+
+export function createRoom(hostName, vsAi = false) {
   const code = generateRoomCode();
+  const players = [{ name: hostName }];
+  if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
   const room = {
     id: nanoid(),
     code,
-    state: "lobby", // lobby | voting-mode | dealing | pitching | voting | results
+    state: "lobby",
     host: hostName,
-    players: [{ name: hostName }],
-    votingMode: null, // "players" | "serious-shrimp" | "silly-shrimp" | "mean-shrimp"
+    players,
+    vsAi,
+    votingMode: null,
     market: null,
-    hands: {}, // playerName -> [cards]
-    selections: {}, // playerName -> [card, card]
-    pitches: {}, // playerName -> { companyName, pitch }
-    votes: {}, // playerName -> playerName they voted for
+    hands: {},
+    selections: {},
+    pitches: {},
+    votes: {},
     shrimpVote: null,
     round: 0,
-    scores: {}, // playerName -> win count
+    scores: {},
   };
   rooms.set(code, room);
   return room;
