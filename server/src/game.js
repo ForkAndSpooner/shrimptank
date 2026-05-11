@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { markets, objects, actions, services } from "./data/cards.js";
+import { markets, objects, actions, services, buzzWords } from "./data/cards.js";
 
 const rooms = new Map();
 
@@ -30,7 +30,7 @@ function drawCards(n) {
 
 export const AI_PLAYER = "🤖 The Algorithm";
 
-export function createRoom(hostName, vsAi = false) {
+export function createRoom(hostName, vsAi = false, buzzMode = false) {
   const code = generateRoomCode();
   const players = [{ name: hostName }];
   if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
@@ -41,8 +41,10 @@ export function createRoom(hostName, vsAi = false) {
     host: hostName,
     players,
     vsAi,
-    votingMode: null,
+    buzzMode,
+    votingMode: null, // "friends-family" | "venture-capital" | "evil-tech-bro"
     market: null,
+    buzzWord: null,
     hands: {},
     selections: {},
     pitches: {},
@@ -82,6 +84,7 @@ export function dealRound(code) {
   if (!room) return null;
   room.round++;
   room.market = markets[Math.floor(Math.random() * markets.length)];
+  room.buzzWord = room.buzzMode ? buzzWords[Math.floor(Math.random() * buzzWords.length)] : null;
   room.hands = {};
   room.selections = {};
   room.pitches = {};
