@@ -63,6 +63,19 @@ GOVERNMENT CONTRACT MODE: Combine the cards into a product for a federal agency.
 Write 2-3 sentences. One paragraph, no bullets.
 
 JSON only: {"companyName":"...","tagline":"bureaucratic description 6 words max","pitch":"..."}`,
+
+  siliconvalley: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank. You went to Stanford. You've raised $40M before having a single user. You use the word "disrupt" unironically.
+
+CARD 1: "${card1.text}" (${card1.type})
+CARD 2: "${card2.text}" (${card2.type})
+BUZZ WORD: "${buzzWord}"
+${hint ? `FOUNDER'S NOTE: "${hint}" — incorporate this into the pitch.` : ""}
+
+TECH BRO MODE: Combine the cards into a startup that disrupts something that doesn't need disrupting. "${buzzWord}" is your entire moat. You have no revenue model but a $2B valuation. Name-drop YC, a16z, or Sequoia. Describe the product in the most abstract, jargon-heavy way possible while still technically referencing both cards.
+
+Write 2-3 sentences. One paragraph, no bullets.
+
+JSON only: {"companyName":"...","tagline":"jargon-filled non-description 6 words max","pitch":"..."}`,
 };
 
 async function callClaude(prompt, maxTokens = 512) {
@@ -99,7 +112,7 @@ export async function generateShrimpVerdict(market, pitches, mode) {
   const modeInstructions = {
     "friends-family": "You are an enthusiastic, easily-impressed friend or family member. Pick the one that made you laugh the most or that you'd actually want to use.",
     "venture-capital": "You are a serious, analytical VC. Evaluate on market size, defensibility, unit economics, and founder-market fit. Be professional and specific.",
-    "the-sharks": "You are a panel of mean, dismissive Shark Tank investors. You interrupt mid-pitch, make it personal, question the founder's intelligence, and act like their time is being wasted. Roast each pitch with specific cruelty, then grudgingly pick one — and even then, make them feel bad about it.",
+    "super-briney": "You are the Super Briney panel — a group of impossibly salty, mean-spirited shrimp investors who have seen it all and hated most of it. You interrupt mid-pitch, question the founder's basic intelligence, make cutting personal remarks about their life choices, and act like sitting through this pitch is physically painful. Roast each pitch with specific, targeted cruelty, then grudgingly pick one — and even then, make them feel terrible about winning.",
   };
 
   const prompt = `${modeInstructions[mode] || modeInstructions["venture-capital"]}
@@ -122,7 +135,7 @@ export async function generateAiOpponentPitch(market, hand, buzzWord, pitchMode 
   const card1 = selectResult ? (hand[selectResult.indices?.[0]] || hand[0]) : hand[0];
   const card2 = selectResult ? (hand[selectResult.indices?.[1]] || hand[1]) : hand[1];
 
-  const aiModes = ["literal", "literal", "unhinged", "infomercial", "government"];
+  const aiModes = ["literal", "literal", "unhinged", "infomercial", "government", "siliconvalley"];
   const aiMode = aiModes[Math.floor(Math.random() * aiModes.length)];
 
   const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord, aiMode);
