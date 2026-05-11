@@ -1,52 +1,46 @@
-// Pitch modes — all delivered infomercial-style
+// Pitch modes — Shark Tank energy with a slight hard-sell edge
 const PITCH_PROMPTS = {
-  literal: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. Breathless energy, fake urgency, complete conviction.
+  literal: (card1, card2, buzzWord, hint) => `You are a founder pitching on a wacky business pitch show. Confident, direct, slightly over-the-top — like Shark Tank but the ideas are absurd.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-LITERAL MODE: The product is LITERALLY "${card1.text}" combined with "${card2.text}" — do NOT invent a new product category. A stapler drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. The product IS this exact physical combination, pitched like it solves humanity's greatest crisis.
+LITERAL MODE: The product is LITERALLY "${card1.text}" combined with "${card2.text}" — do NOT invent a new product category. A stapler drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. The product IS this exact physical combination.
 
-FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — how the user holds it, wears it, sets it up, what happens when they turn it on, how it feels, what problem it solves moment-to-moment. Skip funding asks, market-size talk, and revenue projections.
+Pitch it like you genuinely believe in it. Lead with what the product IS and what it does. Then the problem it solves. End with a confident ask (equity + valuation). No fake testimonials, no "But WAIT".
 
-Structure: (1) Vivid description of the product in action. (2) One fake testimonial from a customer. (3) Closer with "But WAIT — there's more!" and a ridiculous price.
+STRICT LIMIT: 3 sentences MAX. Under 80 words total.
 
-STRICT LIMIT: 3 sentences MAX. Under 100 words total.
+JSON only: {"companyName":"...","tagline":"6 words max","pitch":"..."}`,
 
-JSON only: {"companyName":"...","tagline":"literal hook 6 words max","pitch":"..."}`,
-
-  creative: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. Breathless energy, fake urgency, complete conviction.
+  creative: (card1, card2, buzzWord, hint) => `You are a founder pitching on a wacky business pitch show. Confident, direct, slightly over-the-top — like Shark Tank but the ideas are absurd.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-CREATIVE MODE: Invent a NEW product category inspired by the cards — reinterpret, combine metaphorically, or find an unexpected angle. You decide the customer. Pitch it like it's the most important invention since sliced bread.
+CREATIVE MODE: Invent a new product category inspired by the cards — reinterpret, combine metaphorically, find an unexpected angle. You decide the customer.
 
-FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — how the user interacts with it, what it physically does, what changes for them when they use it. Skip funding asks, market-size talk, and revenue projections.
+Pitch it like you genuinely believe in it. Lead with what the product IS and what it does. Then the problem it solves. End with a confident ask (equity + valuation). No fake testimonials, no "But WAIT".
 
-Structure: (1) Vivid description of the product in action. (2) One fake testimonial from a customer. (3) Closer with "But WAIT — there's more!" and a ridiculous price.
+STRICT LIMIT: 3 sentences MAX. Under 80 words total.
 
-STRICT LIMIT: 3 sentences MAX. Under 100 words total.
+JSON only: {"companyName":"...","tagline":"6 words max","pitch":"..."}`,
 
-JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch":"..."}`,
-
-  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching a business idea. No regard for safety. Breathless energy, complete conviction.
+  unhinged: (card1, card2, buzzWord, hint) => `You are a founder pitching on a wacky business pitch show. Confident, direct, completely unaware of the danger — like Shark Tank but the idea is reckless.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. Pitch it with complete earnestness.
+UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. Pitch it with complete earnestness — you see no problem here.
 
-FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — exactly what it does to the user, how it operates, what the dangerous experience feels like in the moment. Skip funding asks, market-size talk, and revenue projections.
+Lead with what the product IS and what it does. Then why people obviously need it despite the obvious risks. End with a confident ask. No fake testimonials, no "But WAIT".
 
-Structure: (1) Vivid description of the product in (alarming) action. (2) Testimonial from someone who survived. (3) Closer with "But WAIT — there's more!" and a price that ignores the liability.
+STRICT LIMIT: 3 sentences MAX. Under 80 words total.
 
-STRICT LIMIT: 3 sentences MAX. Under 100 words total.
-
-JSON only: {"companyName":"...","tagline":"alarming hook 6 words max","pitch":"..."}`,
+JSON only: {"companyName":"...","tagline":"6 words max","pitch":"..."}`,
 };
 
 const ALL_PROMPTS = PITCH_PROMPTS;
@@ -141,3 +135,4 @@ function mockVerdict(pitches) {
     reasoning: "The Shrimp had technical difficulties. Picking at random.",
   };
 }
+
