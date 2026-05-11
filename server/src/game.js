@@ -33,7 +33,7 @@ function drawCards(n) {
 
 export const AI_PLAYER = "🤖 The Algorithm";
 
-export function createRoom(hostName, vsAi = false, sharedHand = false) {
+export function createRoom(hostName, vsAi = false, sharedHand = true) {
   const code = generateRoomCode();
   const players = [{ name: hostName }];
   if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
@@ -88,7 +88,9 @@ export function dealRound(code) {
   if (!room) return null;
   room.round++;
   room.market = null;
-  room.buzzWord = buzzWords[Math.floor(Math.random() * buzzWords.length)];
+  const bw = buzzWords[Math.floor(Math.random() * buzzWords.length)];
+  room.buzzWord = bw.word;
+  room.buzzWordDef = bw.def;
   room.hands = {};
   room.selections = {};
   room.pitchModes = {};
@@ -96,14 +98,10 @@ export function dealRound(code) {
   room.votes = {};
   room.shrimpVote = null;
 
-  if (room.sharedHand) {
-    // Shared hand: 6 + ceil(players/2) cards, same for everyone
-    const n = 6 + Math.ceil(room.players.length / 2);
-    const shared = drawCards(n);
-    for (const p of room.players) room.hands[p.name] = shared;
-  } else {
-    // Private hand: fixed 7 cards (3 obj + 2 svc + 2 action)
-    for (const p of room.players) room.hands[p.name] = drawCards(7);
+  // Always 7 cards; shared hand means everyone gets the same draw
+  const hand = drawCards(7);
+  for (const p of room.players) {
+    room.hands[p.name] = room.sharedHand ? hand : drawCards(7);
   }
 
   room.state = "pitching";
