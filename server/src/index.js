@@ -36,9 +36,10 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  socket.on("create-room", (name, vsAi, cb) => {
-    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; }
-    const room = createRoom(name, vsAi);
+  socket.on("create-room", (name, vsAi, sharedHand, cb) => {
+    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; sharedHand = false; }
+    else if (typeof sharedHand === "function") { cb = sharedHand; sharedHand = false; }
+    const room = createRoom(name, vsAi, sharedHand);
     currentRoom = room.code;
     playerName = name;
     socket.join(room.code);
