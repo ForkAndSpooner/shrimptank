@@ -94,15 +94,19 @@ export function dealRound(code) {
   if (!room) return null;
   room.round++;
   room.market = null;
-  const bw = buzzWords[Math.floor(Math.random() * buzzWords.length)];
-  room.buzzWord = bw.word;
-  room.buzzWordDef = bw.def;
   room.hands = {};
   room.selections = {};
   room.pitchModes = {};
   room.pitches = {};
   room.votes = {};
   room.shrimpVote = null;
+
+  // Hidden buzz word for this round. Players don't see it while pitching;
+  // it's revealed at judging time and contributes 25% to the judge's decision.
+  const bw = buzzWords[Math.floor(Math.random() * buzzWords.length)];
+  room.buzzWord = bw.word;
+  room.buzzWordDef = bw.def;
+  room.buzzWordRevealed = false;
 
   // Always 7 cards; shared hand means everyone gets the same draw
   const hand = drawCards(7);
@@ -111,6 +115,20 @@ export function dealRound(code) {
   }
 
   room.state = "pitching";
+  return room;
+}
+
+// Returns a copy of the room safe to broadcast while the buzz word is still hidden.
+export function publicRoom(room) {
+  if (!room) return room;
+  if (room.buzzWordRevealed) return room;
+  return { ...room, buzzWord: null, buzzWordDef: null };
+}
+
+export function revealBuzzWord(code) {
+  const room = rooms.get(code.toUpperCase());
+  if (!room) return null;
+  room.buzzWordRevealed = true;
   return room;
 }
 
@@ -142,10 +160,10 @@ export function submitVote(code, voterName, votedFor) {
   return room;
 }
 
-export function setShrimpVote(code, votedFor, reasoning, buzzBonus = null, buzzBonusReason = null) {
+export function setShrimpVote(code, votedFor, reasoning) {
   const room = rooms.get(code.toUpperCase());
   if (!room) return null;
-  room.shrimpVote = { votedFor, reasoning, buzzBonus, buzzBonusReason };
+  room.shrimpVote = { votedFor, reasoning };
   room.state = "results";
   return room;
 }
@@ -175,12 +193,6 @@ export function tallyAndFinish(code) {
   }
   const winner = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0];
   if (winner) room.scores[winner] = (room.scores[winner] || 0) + 1;
-  // Buzz Card Bonus
-  const buzzWinner = room.shrimpVote?.buzzBonus;
-  if (buzzWinner && room.players.find(p => p.name === buzzWinner)) {
-    room.buzzBonusScores = room.buzzBonusScores || {};
-    room.buzzBonusScores[buzzWinner] = (room.buzzBonusScores[buzzWinner] || 0) + 1;
-  }
   room.tally = tally;
   room.winner = winner;
   room.state = "results";

@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import {
   createRoom, joinRoom, getRoom, setVotingMode, startGame, dealRound,
-  selectCards, setPitch, submitVote, setShrimpVote,
+  selectCards, setPitch, submitVote, setShrimpVote, revealBuzzWord, publicRoom,
   allVoted, tallyAndFinish, nextRound, removePlayer, renamePlayer, AI_PLAYER
 } from "./game.js";
 import { generatePitch, generateShrimpVerdict, generateAiOpponentPitch } from "./llm.js";
@@ -22,10 +22,11 @@ app.use(express.static(join(__dirname, "..", "public")));
 
 // Generate a pitch preview (for regenerate/hint flow — doesn't lock in)
 app.post("/api/pitch-preview", async (req, res) => {
-  const { card1, card2, buzzWord, pitchMode, hint } = req.body;
-  if (!card1 || !card2 || !buzzWord || !pitchMode) return res.status(400).json({ error: "Missing fields" });
+  const { card1, card2, pitchMode, hint } = req.body;
+  if (!card1 || !card2 || !pitchMode) return res.status(400).json({ error: "Missing fields" });
   try {
-    const pitch = await generatePitch(null, card1, card2, "preview", buzzWord, pitchMode, hint);
+    // Buzz word is intentionally hidden from players during pitching — pass null.
+    const pitch = await generatePitch(null, card1, card2, "preview", null, pitchMode, hint);
     res.json(pitch);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -82,13 +83,14 @@ io.on("connection", (socket) => {
     currentRoom = roomId; // re-anchor if needed
     const updated = dealRound(currentRoom);
     if (!updated) return;
-    io.to(currentRoom).emit("round-dealt", updated);
+    // Broadcast without the hidden buzz word — players write pitches unaware of it.
+    io.to(currentRoom).emit("round-dealt", publicRoom(updated));
 
-    // If vs AI: start generating AI pitch immediately in background
+    // If vs AI: start generating AI pitch immediately in background. AI is also unaware of the buzz word.
     if (updated.vsAi) {
       const aiPlayer = updated.players.find(p => p.isAi);
       if (aiPlayer) {
-        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], updated.buzzWord).then(({ pitch, selections, pitchMode: aiMode }) => {
+        generateAiOpponentPitch(updated.market, updated.hands[aiPlayer.name], null).then(({ pitch, selections, pitchMode: aiMode }) => {
           const r = getRoom(currentRoom);
           if (!r || r.round !== updated.round) return; // stale round
           selectCards(currentRoom, aiPlayer.name, [
@@ -125,60 +127,43 @@ io.on("connection", (socket) => {
       setPitch(currentRoom, playerName, preGeneratedPitch);
     }
 
-    // If vs AI: AI pitch was pre-generated at deal time, just check if ready
-    if (updated.vsAi && humanSelections >= humanPlayers) {
+    // Once all human players are locked in, transition to voting and reveal the buzz word.
+    if (updated.vsAi && lockedInPlayers.length >= humanPlayers) {
       const final = getRoom(currentRoom);
       const allReady = final.players.every(p => final.pitches?.[p.name]);
-      if (allReady) {
-        final.state = "voting";
-        io.to(currentRoom).emit("pitches-ready", final);
-        if (final.votingMode !== "players") {
-          generateShrimpVerdict(final.market, final.pitches, final.votingMode, final.buzzWord).then(verdict => {
-            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
+      const goToVoting = () => {
+        revealBuzzWord(currentRoom);
+        const r = getRoom(currentRoom);
+        r.state = "voting";
+        io.to(currentRoom).emit("pitches-ready", r);
+        if (r.votingMode !== "players") {
+          generateShrimpVerdict(r.market, r.pitches, r.votingMode, r.buzzWord).then(verdict => {
+            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
             io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
           }).catch(() => {
-            const players = Object.keys(final.pitches);
+            const players = Object.keys(r.pitches);
             setShrimpVote(currentRoom, players[0], "Technical difficulties.");
             io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
           });
         }
+      };
+      if (allReady) {
+        goToVoting();
       } else {
-        // AI still generating — wait for it
         io.to(currentRoom).emit("ai-thinking");
         const waitForAi = setInterval(() => {
           const r = getRoom(currentRoom);
           if (!r) { clearInterval(waitForAi); return; }
           if (r.players.every(p => r.pitches?.[p.name])) {
             clearInterval(waitForAi);
-            r.state = "voting";
-            io.to(currentRoom).emit("pitches-ready", r);
-            if (r.votingMode !== "players") {
-              generateShrimpVerdict(r.market, r.pitches, r.votingMode, r.buzzWord).then(verdict => {
-                setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
-                io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
-              }).catch(() => {
-                const players = Object.keys(r.pitches);
-                setShrimpVote(currentRoom, players[0], "Technical difficulties.");
-                io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
-              });
-            }
+            goToVoting();
           }
         }, 500);
-        // Safety timeout after 20s
         setTimeout(() => clearInterval(waitForAi), 20000);
       }
-    } else if (!updated.vsAi && humanSelections >= humanPlayers) {
-      // Multiplayer: generate any missing pitches
-      io.to(currentRoom).emit("generating-pitches");
-      const pitchPromises = updated.players.map(async p => {
-        if (updated.pitches?.[p.name]) return { playerName: p.name, pitch: updated.pitches[p.name] };
-        const [c1, c2] = updated.selections[p.name] || [];
-        if (!c1) return null;
-        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, updated.pitchModes?.[p.name] || "literal");
-        return { playerName: p.name, pitch };
-      });
-      const results = (await Promise.all(pitchPromises)).filter(Boolean);
-      for (const { playerName: pn, pitch } of results) setPitch(currentRoom, pn, pitch);
+    } else if (!updated.vsAi && lockedInPlayers.length >= humanPlayers) {
+      // Multiplayer: pitches are pre-generated client-side; just reveal buzz word and move on.
+      revealBuzzWord(currentRoom);
       io.to(currentRoom).emit("pitches-ready", getRoom(currentRoom));
     }
 
@@ -212,12 +197,11 @@ io.on("connection", (socket) => {
     io.to(currentRoom).emit("shrimp-thinking");
     try {
       const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode, room.buzzWord);
-      setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
+      setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
       const final = tallyAndFinish(currentRoom);
       io.to(currentRoom).emit("results", final);
     } catch (e) {
       console.error("Verdict handler error:", e.message);
-      // Fall back to random pick
       const players = Object.keys(room.pitches);
       const fallback = players[Math.floor(Math.random() * players.length)];
       setShrimpVote(currentRoom, fallback, "The Shrimp had technical difficulties. Picking at random.");

@@ -4,7 +4,6 @@ const PITCH_PROMPTS = {
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
 LITERAL MODE: The product is LITERALLY "${card1.text}" combined with "${card2.text}" — do NOT invent a new product category. A stapler drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. The product IS this exact physical combination, pitched like it solves humanity's greatest crisis.
@@ -21,10 +20,9 @@ JSON only: {"companyName":"...","tagline":"literal hook 6 words max","pitch":"..
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-CREATIVE MODE: Invent a NEW product category inspired by the cards — reinterpret, combine metaphorically, or find an unexpected angle. "${buzzWord}" is the core technology. You decide the customer. Pitch it like it's the most important invention since sliced bread.
+CREATIVE MODE: Invent a NEW product category inspired by the cards — reinterpret, combine metaphorically, or find an unexpected angle. You decide the customer. Pitch it like it's the most important invention since sliced bread.
 
 FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — how the user interacts with it, what it physically does, what changes for them when they use it. Skip funding asks, market-size talk, and revenue projections.
 
@@ -38,10 +36,9 @@ JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch"
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. "${buzzWord}" amplifies the danger. Pitch it with complete earnestness.
+UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. Pitch it with complete earnestness.
 
 FOCUS ON WHAT THE PRODUCT DOES: Show the product in action — exactly what it does to the user, how it operates, what the dangerous experience feels like in the moment. Skip funding asks, market-size talk, and revenue projections.
 
@@ -87,12 +84,11 @@ export async function generatePitch(market, card1, card2, playerName, buzzWord, 
 export async function generateShrimpVerdict(market, pitches, mode, buzzWord) {
   const modeInstructions = {
     "friends-family": "You are an enthusiastic, easily-impressed friend or family member. Pick the one that made you laugh the most or that you'd actually want to use.",
-    "venture-capital": `You are a serious VC. Score each pitch on three criteria (1-10 each):
+    "venture-capital": `You are a serious VC. Score each pitch on the business idea (1-10 each):
 - Customer problem: Does it solve a real, significant problem?
 - Feasibility: Could this actually be built and delivered?
-- Revenue potential: Is there a credible path to making money?
-Show the scores, then pick the winner based on total score.`,
-    "super-briney": "You are the Super Briney panel — impossibly salty shrimp investors. Interrupt mid-pitch, question their intelligence, make cutting personal remarks. Roast each pitch with specific cruelty, then grudgingly pick one and make them feel terrible about winning.",
+- Revenue potential: Is there a credible path to making money?`,
+    "super-briney": "You are the Super Briney panel — impossibly salty shrimp investors. Interrupt mid-pitch, question their intelligence, make cutting personal remarks. Roast each pitch with specific cruelty.",
   };
 
   const prompt = `${modeInstructions[mode] || modeInstructions["venture-capital"]}
@@ -100,20 +96,24 @@ Show the scores, then pick the winner based on total score.`,
 THE PITCHES:
 ${Object.entries(pitches).map(([player, p]) => `${player} — ${p.companyName} ("${p.tagline}")\n"${p.pitch}"`).join("\n\n")}
 
-BUZZ CARD BONUS: The buzz word this round was "${buzzWord}". Award the bonus to whichever player best integrated it into their pitch in a meaningful way (not just mentioning it — actually using it as a core part of the idea). If nobody integrated it well, award it to nobody.
+HIDDEN BUZZ: This round's buzz word was "${buzzWord}". The pitchers did NOT know it. You only just learned it.
 
-Pick ONE winner AND one buzz card bonus recipient (can be the same player or different, or null if nobody earned it).
+JUDGING WEIGHTS:
+- 75% — the strength of the business idea (per your persona above).
+- 25% — buzz fit: how well the pitch authentically embodies "${buzzWord}", even if the word itself never appears. Penalize forced shoehorning.
 
-JSON only: {"votedFor":"exact player name","reasoning":"2-3 sentences in character","buzzBonus":"exact player name or null","buzzBonusReason":"one sentence explaining why they earned it, or null"}`;
+In your reasoning (2-3 sentences, in character), you MUST briefly call out the buzz word reveal — name it explicitly and say which pitch fit it best, then close with why your overall pick won on the combined score.
+
+JSON only: {"votedFor":"exact player name","reasoning":"..."}`;
 
   const result = await callClaude(prompt, 512, "claude-sonnet-4-5-20250929");
   return result || mockVerdict(pitches);
 }
 
-export async function generateAiOpponentPitch(market, hand, buzzWord) {
+export async function generateAiOpponentPitch(market, hand, _buzzWord) {
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
   const selectResult = await callClaude(
-    `A business idea pitch game. Buzz: "${buzzWord}". Hand: [${handDesc}]. Pick 2 indices for the most absurd-yet-earnest combo. JSON only: {"indices":[i,j]}`,
+    `A business idea pitch game. Hand: [${handDesc}]. Pick 2 indices for the most absurd-yet-earnest combo. JSON only: {"indices":[i,j]}`,
     50
   );
   const card1 = selectResult ? (hand[selectResult.indices?.[0]] || hand[0]) : hand[0];
