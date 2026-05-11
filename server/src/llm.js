@@ -1,19 +1,22 @@
-export async function generatePitch(market, card1, card2, playerName) {
+export async function generatePitch(market, card1, card2, playerName, buzzWord = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  const businessDesc = `${card1.text} + ${card2.text}`;
+  if (!apiKey) return mockPitch(market, card1, card2, buzzWord);
 
-  if (!apiKey) return mockPitch(market, card1, card2);
+  const buzzLine = buzzWord
+    ? `BUZZ WORD: "${buzzWord}" — your product MUST incorporate this as a core feature, not an afterthought.`
+    : "";
 
   const prompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
 
 MARKET: ${market}
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
+${buzzLine}
 
-Your product MUST literally combine both cards — they are not metaphors or inspiration, they are the actual product. The customer is specifically someone in the ${market} context.
+Your product MUST literally combine both cards — they are not metaphors, they are the actual product. The customer is specifically someone in the ${market} context.${buzzWord ? ` The ${buzzWord} aspect must be central to why this works.` : ""}
 
 Write 2-3 sentences:
-- Sentence 1: Name the company and state exactly what the product is (combining both cards)
+- Sentence 1: Name the company and state exactly what the product is (combining both cards${buzzWord ? ` and ${buzzWord}` : ""})
 - Sentence 2: The obvious problem it solves for ${market} customers, and why your solution is the only logical answer
 - Sentence 3: One confident market size claim + your ask (dollar amount + equity %)
 
@@ -32,28 +35,18 @@ Respond in JSON only:
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 512,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 512, messages: [{ role: "user", content: prompt }] }),
     });
     const data = await res.json();
-    console.log("Pitch API response:", JSON.stringify(data).slice(0, 200));
     const text = data.content?.[0]?.text;
-    if (!text) { console.error("No text in response:", data); return mockPitch(market, card1, card2); }
+    if (!text) { console.error("Pitch API error:", data); return mockPitch(market, card1, card2, buzzWord); }
     const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    console.error("No JSON in response:", text);
   } catch (e) {
     console.error("Claude pitch error:", e.message);
   }
-  return mockPitch(market, card1, card2);
+  return mockPitch(market, card1, card2, buzzWord);
 }
 
 export async function generateShrimpVerdict(market, pitches, mode) {
@@ -61,9 +54,9 @@ export async function generateShrimpVerdict(market, pitches, mode) {
   if (!apiKey) return mockVerdict(pitches);
 
   const modeInstructions = {
-    "serious-shrimp": "You are a serious, analytical VC investor. Evaluate each pitch on market size, feasibility, competitive moat, and revenue potential. Be professional but honest.",
-    "silly-shrimp": "You are a chaotic, easily-distracted investor who picks the most absurd and entertaining pitch. You love chaos. The weirder the better.",
-    "mean-shrimp": "You are a brutally honest, sarcastic investor in the style of Gordon Ramsay meets Kevin O'Leary. Roast every pitch mercilessly, then reluctantly pick one.",
+    "friends-family": "You are an enthusiastic, easily-impressed friend or family member who thinks every idea is amazing. You pick the one that made you laugh the most or that you'd actually want to use.",
+    "venture-capital": "You are a serious, analytical VC. Evaluate each pitch on market size, defensibility, unit economics, and founder-market fit. Be professional and specific.",
+    "evil-tech-bro": "You are a brutally sarcastic, condescending tech investor — think Gordon Ramsay meets a Silicon Valley villain. Roast every pitch mercilessly with specific jabs, then reluctantly pick one and explain why it's the least terrible.",
   };
 
   const prompt = `${modeInstructions[mode]}
@@ -71,30 +64,19 @@ export async function generateShrimpVerdict(market, pitches, mode) {
 MARKET: ${market}
 
 THE PITCHES:
-${Object.entries(pitches).map(([player, p]) => `
-${player} — ${p.companyName} ("${p.tagline}")
-"${p.pitch}"
-`).join("\n")}
+${Object.entries(pitches).map(([player, p]) => `${player} — ${p.companyName} ("${p.tagline}")\n"${p.pitch}"`).join("\n\n")}
 
-Pick ONE winner. Respond in JSON:
+Pick ONE winner. Respond in JSON only:
 {
   "votedFor": "exact player name",
-  "reasoning": "2-3 sentences explaining your decision in character"
+  "reasoning": "2-3 sentences in character"
 }`;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-5-20250929",
-        max_tokens: 512,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 512, messages: [{ role: "user", content: prompt }] }),
     });
     const data = await res.json();
     const text = data.content?.[0]?.text;
@@ -107,12 +89,11 @@ Pick ONE winner. Respond in JSON:
   return mockVerdict(pitches);
 }
 
-export async function generateAiOpponentPitch(market, hand) {
-  // AI picks the 2 most comedically promising cards from its hand
+export async function generateAiOpponentPitch(market, hand, buzzWord = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
 
-  let card1 = hand[0], card2 = hand[1]; // fallback
+  let card1 = hand[0], card2 = hand[1];
 
   if (apiKey) {
     try {
@@ -133,15 +114,16 @@ export async function generateAiOpponentPitch(market, hand) {
     } catch (e) { /* use fallback */ }
   }
 
-  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm");
+  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord);
   return { pitch, selections: [card1, card2] };
 }
 
-function mockPitch(market, card1, card2) {
+function mockPitch(market, card1, card2, buzzWord) {
+  const buzz = buzzWord ? ` powered by ${buzzWord}` : "";
   return {
     companyName: `${card1.text.split(" ")[0]}${card2.text.split(" ")[0]}ly`.replace(/\s/g, ""),
-    tagline: `Disrupting ${market} with ${card1.text} and ${card2.text}`,
-    pitch: `We're seeking $1.5M for 10% equity. Our platform combines ${card1.text} and ${card2.text} to disrupt the ${market} space. The market is $50B and we're positioned to capture 0.1% in year one. We're pre-revenue but post-vision.`,
+    tagline: `${card1.text} meets ${card2.text}`,
+    pitch: `We're seeking $1.5M for 10% equity. Our platform combines ${card1.text} and ${card2.text}${buzz} to disrupt the ${market} space. The market is $50B and we're positioned to capture 0.1% in year one.`,
   };
 }
 
