@@ -269,7 +269,7 @@
       show("dealing");
     }
 
-    function dealRound() { socket.emit("deal-round"); }
+    function dealRound() { socket.emit("deal-round", roomCode); }
 
     // PITCHING
     function showPitching(room) {
