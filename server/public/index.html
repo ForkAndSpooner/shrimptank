@@ -73,6 +73,15 @@
   <div id="home" class="screen active">
     <div class="card">
       <input id="player-name" placeholder="Your display name" maxlength="20">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button id="mode-literal" class="mode-toggle active" onclick="setPitchMode('literal')" style="flex:1; background:#533483; border:2px solid #ffd700; font-size:0.85rem; padding:10px;">
+          🔩 Literal Mode
+        </button>
+        <button id="mode-creative" class="mode-toggle" onclick="setPitchMode('creative')" style="flex:1; background:#1b2838; border:2px solid #333; font-size:0.85rem; padding:10px;">
+          ✨ Creative Mode
+        </button>
+      </div>
+      <p id="mode-desc" style="color:#aaa; font-size:0.8rem; text-align:center; margin-bottom:12px;">Cards mean exactly what they are. No metaphors.</p>
       <button onclick="createGame(false)">Start New Game</button>
       <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
       <hr class="divider">
@@ -197,12 +206,27 @@
       return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
+    let pitchMode = "literal";
+    const modeDescs = {
+      literal: "Cards mean exactly what they are. No metaphors.",
+      creative: "Claude interprets the cards to build the best product it can.",
+    };
+
+    function setPitchMode(mode) {
+      pitchMode = mode;
+      document.getElementById("mode-literal").style.borderColor = mode === "literal" ? "#ffd700" : "#333";
+      document.getElementById("mode-literal").style.background = mode === "literal" ? "#533483" : "#1b2838";
+      document.getElementById("mode-creative").style.borderColor = mode === "creative" ? "#ffd700" : "#333";
+      document.getElementById("mode-creative").style.background = mode === "creative" ? "#533483" : "#1b2838";
+      document.getElementById("mode-desc").textContent = modeDescs[mode];
+    }
+
     // HOME
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
       isHost = true;
-      socket.emit("create-room", myName, vsAi, false, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, false, pitchMode, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -249,6 +273,8 @@
       selectedIndices = [];
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
+      const modeLabel = room.pitchMode === "literal" ? "🔩 Literal Mode" : "✨ Creative Mode";
+      document.getElementById("buzz-inline").textContent = `${room.buzzWord} · ${modeLabel}`;
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
