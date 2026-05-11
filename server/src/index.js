@@ -121,8 +121,8 @@ io.on("connection", (socket) => {
         final.state = "voting";
         io.to(currentRoom).emit("pitches-ready", final);
         if (final.votingMode !== "players") {
-          generateShrimpVerdict(final.market, final.pitches, final.votingMode).then(verdict => {
-            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
+          generateShrimpVerdict(final.market, final.pitches, final.votingMode, final.buzzWord).then(verdict => {
+            setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
             io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
           }).catch(() => {
             const players = Object.keys(final.pitches);
@@ -141,8 +141,8 @@ io.on("connection", (socket) => {
             r.state = "voting";
             io.to(currentRoom).emit("pitches-ready", r);
             if (r.votingMode !== "players") {
-              generateShrimpVerdict(r.market, r.pitches, r.votingMode).then(verdict => {
-                setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
+              generateShrimpVerdict(r.market, r.pitches, r.votingMode, r.buzzWord).then(verdict => {
+                setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
                 io.to(currentRoom).emit("results", tallyAndFinish(currentRoom));
               }).catch(() => {
                 const players = Object.keys(r.pitches);
@@ -194,8 +194,8 @@ io.on("connection", (socket) => {
     if (!["friends-family", "venture-capital", "super-briney"].includes(room.votingMode)) return;
     io.to(currentRoom).emit("shrimp-thinking");
     try {
-      const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode);
-      setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
+      const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode, room.buzzWord);
+      setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning, verdict.buzzBonus, verdict.buzzBonusReason);
       const final = tallyAndFinish(currentRoom);
       io.to(currentRoom).emit("results", final);
     } catch (e) {
