@@ -261,11 +261,11 @@
           <div>
             <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style</p>
             <div class="grid grid-cols-3 gap-2">
-              <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="style-btn literal">
+              <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="style-btn literal selected">
                 <div class="style-name">🔩 Literal</div>
                 <div class="style-desc">exact combo</div>
               </button>
-              <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="style-btn creative selected">
+              <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="style-btn creative">
                 <div class="style-name">✨ Creative</div>
                 <div class="style-desc">remix</div>
               </button>
@@ -342,7 +342,7 @@
     let myName = "", isHost = false, roomCode = "";
     let gameRoom = {};
     let selectedIndices = [];
-    let selectedIdeaMode = "creative";
+    let selectedIdeaMode = "literal";
     let currentPitch = null;
     let isPitchLocked = false;
     let lockedInPlayers = new Set();
@@ -519,14 +519,14 @@
       selectedIndices = [];
       currentPitch = null;
       isPitchLocked = false;
-      selectedIdeaMode = "creative";
+      selectedIdeaMode = "literal";
       lockedInPlayers = new Set();
       voters = new Set();
       updateStatusBar(room);
 
       document.getElementById("pitch-area").style.display = "none";
       document.getElementById("pitch-angle").value = "";
-      setStyleSelection("creative");
+      setStyleSelection("literal");
       startAnglePlaceholderRotation();
 
       const hand = room.hands[myName] || [];
