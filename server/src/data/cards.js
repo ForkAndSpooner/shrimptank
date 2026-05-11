@@ -5,7 +5,7 @@ export const markets = [
   "Gaming", "Healthcare", "Home Improvement", "Hotels", "Insurance",
   "Legal Services", "Luxury Goods", "Nightlife", "Online Shopping",
   "Pet Care", "Pharmaceuticals", "Prison System", "Public Transit",
-  "Real Estate", "Religion", "Senior Living", "Space Travel", "Sports",
+  "Real Estate", "Religion", "Senior Living", "Sports",
   "Theme Parks", "Transportation", "Wedding Industry",
 ];
 
