@@ -42,6 +42,7 @@ io.on("connection", (socket) => {
     currentRoom = room.code;
     playerName = name;
     socket.join(room.code);
+    console.log(`create-room: ${name} -> room ${room.code}`);
     cb({ code: room.code, room });
   });
 
@@ -58,16 +59,19 @@ io.on("connection", (socket) => {
   // Host sets voting mode and starts game
   socket.on("set-voting-mode", (mode) => {
     const room = getRoom(currentRoom);
+    console.log(`set-voting-mode: player=${playerName} room=${currentRoom} mode=${mode}`);
     if (!room || playerName !== room.host) return;
     const updated = setVotingMode(currentRoom, mode);
     if (updated) io.to(currentRoom).emit("game-started", updated);
   });
 
   // Host deals a new round
-  socket.on("deal-round", () => {
-    const room = getRoom(currentRoom);
-    console.log(`deal-round: player=${playerName} room=${currentRoom} host=${room?.host} state=${room?.state}`);
+  socket.on("deal-round", (code) => {
+    const roomId = currentRoom || (code && code.toUpperCase());
+    const room = getRoom(roomId);
+    console.log(`deal-round: player=${playerName} currentRoom=${currentRoom} code=${code} host=${room?.host} state=${room?.state}`);
     if (!room || playerName !== room.host) return;
+    currentRoom = roomId; // re-anchor if needed
     const updated = dealRound(currentRoom);
     if (!updated) return;
     io.to(currentRoom).emit("round-dealt", updated);
