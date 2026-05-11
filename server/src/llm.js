@@ -35,15 +35,18 @@ Respond in JSON only:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 512,
         messages: [{ role: "user", content: prompt }],
       }),
     });
     const data = await res.json();
-    const text = data.content[0].text;
+    console.log("Pitch API response:", JSON.stringify(data).slice(0, 200));
+    const text = data.content?.[0]?.text;
+    if (!text) { console.error("No text in response:", data); return mockPitch(market, card1, card2); }
     const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
+    console.error("No JSON in response:", text);
   } catch (e) {
     console.error("Claude pitch error:", e.message);
   }
@@ -85,13 +88,14 @@ Pick ONE winner. Respond in JSON:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 512,
         messages: [{ role: "user", content: prompt }],
       }),
     });
     const data = await res.json();
-    const text = data.content[0].text;
+    const text = data.content?.[0]?.text;
+    if (!text) { console.error("Verdict API error:", data); return mockVerdict(pitches); }
     const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
   } catch (e) {
