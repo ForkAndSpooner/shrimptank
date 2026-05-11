@@ -136,10 +136,10 @@ export function submitVote(code, voterName, votedFor) {
   return room;
 }
 
-export function setShrimpVote(code, votedFor, reasoning) {
+export function setShrimpVote(code, votedFor, reasoning, buzzBonus = null, buzzBonusReason = null) {
   const room = rooms.get(code.toUpperCase());
   if (!room) return null;
-  room.shrimpVote = { votedFor, reasoning };
+  room.shrimpVote = { votedFor, reasoning, buzzBonus, buzzBonusReason };
   room.state = "results";
   return room;
 }
@@ -169,6 +169,12 @@ export function tallyAndFinish(code) {
   }
   const winner = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0];
   if (winner) room.scores[winner] = (room.scores[winner] || 0) + 1;
+  // Buzz Card Bonus
+  const buzzWinner = room.shrimpVote?.buzzBonus;
+  if (buzzWinner && room.players.find(p => p.name === buzzWinner)) {
+    room.buzzBonusScores = room.buzzBonusScores || {};
+    room.buzzBonusScores[buzzWinner] = (room.buzzBonusScores[buzzWinner] || 0) + 1;
+  }
   room.tally = tally;
   room.winner = winner;
   room.state = "results";
