@@ -1,4 +1,4 @@
-// Pitch modes — idea style determines the product, all delivered infomercial-style
+// Pitch modes — all delivered infomercial-style
 const PITCH_PROMPTS = {
   literal: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. Breathless energy, fake urgency, complete conviction.
 
@@ -7,13 +7,13 @@ CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-LITERAL: Both cards in their most literal real-world sense. A stapler drives metal staples through paper. "${buzzWord}" taken literally. The product IS this exact combination — pitched like it solves humanity's greatest crisis.
+LITERAL MODE: The product is LITERALLY "${card1.text}" combined with "${card2.text}" — do NOT invent a new product category. A stapler drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. The product IS this exact physical combination, pitched like it solves humanity's greatest crisis.
 
-Include one fake testimonial. End with "But WAIT — there's more!" and a ridiculous price. Never acknowledge it's unusual.
+One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price.
 
-2-3 sentences. One paragraph.
+STRICT LIMIT: 2 sentences MAX. Under 75 words total.
 
-JSON only: {"companyName":"...","tagline":"literal infomercial hook 6 words max","pitch":"..."}`,
+JSON only: {"companyName":"...","tagline":"literal hook 6 words max","pitch":"..."}`,
 
   creative: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. Breathless energy, fake urgency, complete conviction.
 
@@ -22,28 +22,28 @@ CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-CREATIVE: Interpret the cards to make the most compelling product possible. "${buzzWord}" is the core technology. You decide the customer — then pitch it like it's the most important invention since sliced bread.
+CREATIVE MODE: Invent a NEW product category inspired by the cards — reinterpret, combine metaphorically, or find an unexpected angle. "${buzzWord}" is the core technology. You decide the customer. Pitch it like it's the most important invention since sliced bread.
 
-Include one fake testimonial. End with "But WAIT — there's more!" and a ridiculous price. Never acknowledge it's unusual.
+One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price.
 
-2-3 sentences. One paragraph.
+STRICT LIMIT: 2 sentences MAX. Under 75 words total.
 
 JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch":"..."}`,
 
-  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. You have no regard for safety or human wellbeing. Breathless energy, complete conviction.
+  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. No regard for safety. Breathless energy, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-UNHINGED: The most dangerous, reckless, or legally questionable product using these cards literally. "${buzzWord}" amplifies the danger. Pitch it like it's obviously a great idea despite the obvious risks.
+UNHINGED MODE: The most dangerous, reckless, or legally questionable product using these cards LITERALLY. "${buzzWord}" amplifies the danger. Pitch it with complete earnestness.
 
-Include one fake testimonial from someone who survived using it. End with "But WAIT — there's more!" and a price that doesn't reflect the liability. Completely straight-faced.
+Testimonial from someone who survived. End with "But WAIT — there's more!" and a price that ignores the liability.
 
-2-3 sentences. One paragraph.
+STRICT LIMIT: 2 sentences MAX. Under 75 words total.
 
-JSON only: {"companyName":"...","tagline":"alarming infomercial hook 6 words max","pitch":"..."}`,
+JSON only: {"companyName":"...","tagline":"alarming hook 6 words max","pitch":"..."}`,
 };
 
 const ALL_PROMPTS = PITCH_PROMPTS;
@@ -78,7 +78,7 @@ export async function generatePitch(market, card1, card2, playerName, buzzWord, 
   return result || mockPitch(card1, card2, buzzWord);
 }
 
-export async function generateShrimpVerdict(market, pitches, mode) {
+export async function generateShrimpVerdict(market, pitches, mode, buzzWord) {
   const modeInstructions = {
     "friends-family": "You are an enthusiastic, easily-impressed friend or family member. Pick the one that made you laugh the most or that you'd actually want to use.",
     "venture-capital": `You are a serious VC. Score each pitch on three criteria (1-10 each):
@@ -94,7 +94,11 @@ Show the scores, then pick the winner based on total score.`,
 THE PITCHES:
 ${Object.entries(pitches).map(([player, p]) => `${player} — ${p.companyName} ("${p.tagline}")\n"${p.pitch}"`).join("\n\n")}
 
-Pick ONE winner. JSON only: {"votedFor":"exact player name","reasoning":"2-3 sentences in character"}`;
+BUZZ CARD BONUS: The buzz word this round was "${buzzWord}". Award the bonus to whichever player best integrated it into their pitch in a meaningful way (not just mentioning it — actually using it as a core part of the idea). If nobody integrated it well, award it to nobody.
+
+Pick ONE winner AND one buzz card bonus recipient (can be the same player or different, or null if nobody earned it).
+
+JSON only: {"votedFor":"exact player name","reasoning":"2-3 sentences in character","buzzBonus":"exact player name or null","buzzBonusReason":"one sentence explaining why they earned it, or null"}`;
 
   const result = await callClaude(prompt, 512, "claude-sonnet-4-5-20250929");
   return result || mockVerdict(pitches);
