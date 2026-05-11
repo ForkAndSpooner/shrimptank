@@ -48,11 +48,6 @@ JSON only: {"companyName":"...","tagline":"alarming infomercial hook 6 words max
 
 const ALL_PROMPTS = PITCH_PROMPTS;
 
-JSON only: {"companyName":"...","tagline":"bureaucratic description 6 words max","pitch":"..."}`,
-};
-
-const ALL_PROMPTS = { ...IDEA_PROMPTS, ...DELIVERY_PROMPTS };
-
 async function callClaude(prompt, maxTokens = 512) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
