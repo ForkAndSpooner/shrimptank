@@ -73,10 +73,6 @@
   <div id="home" class="screen active">
     <div class="card">
       <input id="player-name" placeholder="Your display name" maxlength="20">
-      <label style="display:flex; align-items:center; gap:10px; color:#aaa; margin-bottom:12px; cursor:pointer;">
-        <input type="checkbox" id="buzz-mode" style="width:auto; margin:0;"> 
-        <span>⚡ Buzz Mode <span style="font-size:0.8rem;">(adds a tech buzzword each round)</span></span>
-      </label>
       <button onclick="createGame(false)">Start New Game</button>
       <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
       <hr class="divider">
@@ -132,9 +128,9 @@
   <!-- PITCHING (select cards) -->
   <div id="pitching" class="screen">
     <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:4px;">The market is:</p>
+      <p style="color:#aaa; text-align:center; margin-bottom:4px;">This round's technology:</p>
       <div class="market-badge" id="market-display"></div>
-      <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards to form your business idea:</p>
+      <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
       <div class="hand" id="hand-display"></div>
       <button id="pitch-btn" onclick="submitCards()" disabled>🚀 Build My Pitch</button>
       <p class="status" id="pitch-status"></p>
@@ -144,7 +140,7 @@
   <!-- WAITING FOR PITCHES -->
   <div id="waiting-pitches" class="screen">
     <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:8px;">The market is:</p>
+      <p style="color:#aaa; text-align:center; margin-bottom:8px;">This round's technology:</p>
       <div class="market-badge" id="waiting-market"></div>
       <p class="status waiting" id="pitch-wait-status">Generating pitches...</p>
     </div>
@@ -153,7 +149,7 @@
   <!-- VOTING -->
   <div id="voting" class="screen">
     <div class="card">
-      <p style="color:#aaa; text-align:center; margin-bottom:4px;">Market:</p>
+      <p style="color:#aaa; text-align:center; margin-bottom:4px;">This round's technology:</p>
       <div class="market-badge" id="voting-market"></div>
     </div>
     <div id="pitches-display"></div>
@@ -205,9 +201,8 @@
     function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
-      const buzzMode = document.getElementById("buzz-mode").checked;
       isHost = true;
-      socket.emit("create-room", myName, vsAi, buzzMode, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, false, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -252,8 +247,8 @@
     function showPitching(room) {
       gameRoom = room;
       selectedIndices = [];
-      const buzzHtml = room.buzzWord ? `<div style="text-align:center; color:#e94560; font-size:0.9rem; margin-top:6px;">⚡ Buzz: <strong>${esc(room.buzzWord)}</strong></div>` : "";
-      document.getElementById("market-display").innerHTML = `🏢 ${esc(room.market)}${buzzHtml}`;
+      document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
+      document.getElementById("buzz-inline").textContent = room.buzzWord;
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
@@ -282,8 +277,7 @@
     function submitCards() {
       if (selectedIndices.length !== 2) return;
       document.getElementById("pitch-btn").disabled = true;
-      const buzzHtml = gameRoom.buzzWord ? ` <span style="color:#e94560; font-size:0.85rem;">⚡ ${esc(gameRoom.buzzWord)}</span>` : "";
-      document.getElementById("waiting-market").innerHTML = `🏢 ${esc(gameRoom.market)}${buzzHtml}`;
+      document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
       document.getElementById("pitch-wait-status").textContent = "Cards submitted! Generating pitches...";
       show("waiting-pitches");
       socket.emit("select-cards", selectedIndices);
@@ -292,8 +286,7 @@
     // VOTING
     function showVoting(room) {
       gameRoom = room;
-      const buzzHtml = room.buzzWord ? ` <span style="color:#e94560; font-size:0.85rem;">⚡ ${esc(room.buzzWord)}</span>` : "";
-      document.getElementById("voting-market").innerHTML = `🏢 ${esc(room.market)}${buzzHtml}`;
+      document.getElementById("voting-market").textContent = `⚡ ${room.buzzWord}`;
       const isShrimp = room.votingMode !== "players";
 
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
