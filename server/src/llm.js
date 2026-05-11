@@ -4,27 +4,29 @@ export async function generatePitch(market, card1, card2, playerName) {
 
   if (!apiKey) return mockPitch(market, card1, card2);
 
-  const prompt = `You are pitching on Shrimp Tank. You have 30 seconds. Be the straight man — deliver this with complete conviction, zero irony.
+  const prompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
 
 MARKET: ${market}
-YOUR CARDS: "${card1.text}" + "${card2.text}"
+CARD 1: "${card1.text}" (${card1.type})
+CARD 2: "${card2.text}" (${card2.type})
 
-Write a SHORT elevator pitch (3 sentences max) covering:
-1. The hook — one sentence that names the product and its core promise
-2. The problem + your solution — treat it as blindingly obvious that people need this
-3. The opportunity — one vague but confident market claim, then your ask
+Your product MUST literally combine both cards — they are not metaphors or inspiration, they are the actual product. The customer is specifically someone in the ${market} context.
+
+Write 2-3 sentences:
+- Sentence 1: Name the company and state exactly what the product is (combining both cards)
+- Sentence 2: The obvious problem it solves for ${market} customers, and why your solution is the only logical answer
+- Sentence 3: One confident market size claim + your ask (dollar amount + equity %)
 
 Rules:
-- You live in a world where this product is completely sensible. Never acknowledge it's unusual.
+- Never acknowledge the idea is unusual. This is completely normal.
+- The tagline should literally describe what the product is, not a marketing slogan.
 - No bullet points. One tight paragraph.
-- Specific ask at the end (dollar amount + equity %)
-- Do NOT pad it. Shorter is better. If you can say it in 2 sentences, do that.
 
 Respond in JSON only:
 {
   "companyName": "clever startup name",
-  "tagline": "5 words or fewer",
-  "pitch": "the pitch paragraph"
+  "tagline": "literal product description, 6 words max",
+  "pitch": "2-3 sentence paragraph"
 }`;
 
   try {
@@ -105,7 +107,37 @@ Pick ONE winner. Respond in JSON:
   return mockVerdict(pitches);
 }
 
-function mockPitch(market, card1, card2) {
+export async function generateAiOpponentPitch(market, hand) {
+  // AI picks the 2 most comedically promising cards from its hand
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
+
+  let card1 = hand[0], card2 = hand[1]; // fallback
+
+  if (apiKey) {
+    try {
+      const selectPrompt = `You are playing Shrimp Tank. Market: ${market}. Your hand: [${handDesc}]. Pick the 2 card indices that would make the most absurd-yet-earnest business combination for this market. Respond with JSON only: {"indices": [i, j]}`;
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 50, messages: [{ role: "user", content: selectPrompt }] }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text;
+      const m = text?.match(/\{[\s\S]*\}/);
+      if (m) {
+        const { indices } = JSON.parse(m[0]);
+        card1 = hand[indices[0]] || hand[0];
+        card2 = hand[indices[1]] || hand[1];
+      }
+    } catch (e) { /* use fallback */ }
+  }
+
+  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm");
+  return { pitch, selections: [card1, card2] };
+}
+
+(market, card1, card2) {
   return {
     companyName: `${card1.text.split(" ")[0]}${card2.text.split(" ")[0]}ly`.replace(/\s/g, ""),
     tagline: `Disrupting ${market} with ${card1.text} and ${card2.text}`,
