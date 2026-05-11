@@ -5,7 +5,7 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import {
-  createRoom, joinRoom, getRoom, setVotingMode, dealRound,
+  createRoom, joinRoom, getRoom, setVotingMode, startGame, dealRound,
   selectCards, setPitch, submitVote, setShrimpVote,
   allVoted, tallyAndFinish, nextRound, removePlayer, renamePlayer, AI_PLAYER
 } from "./game.js";
@@ -57,12 +57,19 @@ io.on("connection", (socket) => {
     cb({ room: result.room });
   });
 
-  // Host sets voting mode and starts game
+  // Host updates the judging mode (does not start the game)
   socket.on("set-voting-mode", (mode) => {
     const room = getRoom(currentRoom);
-    console.log(`set-voting-mode: player=${playerName} room=${currentRoom} mode=${mode}`);
     if (!room || playerName !== room.host) return;
     const updated = setVotingMode(currentRoom, mode);
+    if (updated) io.to(currentRoom).emit("room-updated", updated);
+  });
+
+  // Host starts the game (uses whatever mode is currently set; default is super-briney)
+  socket.on("start-game", () => {
+    const room = getRoom(currentRoom);
+    if (!room || playerName !== room.host) return;
+    const updated = startGame(currentRoom);
     if (updated) io.to(currentRoom).emit("game-started", updated);
   });
 
@@ -104,9 +111,14 @@ io.on("connection", (socket) => {
     const updated = selectCards(currentRoom, playerName, cardIndices, pitchMode);
     if (!updated) return;
 
-    const humanSelections = Object.keys(updated.selections).filter(n => n !== AI_PLAYER).length;
+    const lockedInPlayers = Object.keys(updated.selections).filter(n => n !== AI_PLAYER);
     const humanPlayers = updated.players.filter(p => !p.isAi).length;
-    io.to(currentRoom).emit("player-selected", { playerName, count: humanSelections, total: humanPlayers });
+    io.to(currentRoom).emit("player-selected", {
+      playerName,
+      lockedInPlayers,
+      count: lockedInPlayers.length,
+      total: humanPlayers
+    });
 
     // Store the human's pre-generated pitch immediately
     if (preGeneratedPitch) {
@@ -179,7 +191,12 @@ io.on("connection", (socket) => {
     if (!room || room.votingMode !== "players") return;
     if (votedFor === playerName) return; // can't vote for yourself
     submitVote(currentRoom, playerName, votedFor);
-    io.to(currentRoom).emit("vote-cast", { count: Object.keys(room.votes).length, total: room.players.length });
+    io.to(currentRoom).emit("vote-cast", {
+      voter: playerName,
+      voters: Object.keys(room.votes),
+      count: Object.keys(room.votes).length,
+      total: room.players.length
+    });
 
     if (allVoted(currentRoom)) {
       const final = tallyAndFinish(currentRoom);

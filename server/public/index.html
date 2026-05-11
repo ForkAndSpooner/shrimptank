@@ -33,7 +33,39 @@
     .mini-card.service { background: #1a5c3a; color: #6ee7b7; }
 
     /* Buzz word badge */
-    .buzz-badge { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 800; font-size: 1.4rem; padding: 12px 20px; border-radius: 10px; text-align: center; width: 100%; margin: 10px 0; letter-spacing: 0.02em; }
+    .buzz-badge { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 800; font-size: 1.4rem; padding: 12px 20px; border-radius: 10px; text-align: center; width: 100%; margin: 10px 0; letter-spacing: 0.02em; transition: all 0.3s; }
+    .buzz-badge.active { box-shadow: 0 0 24px rgba(245, 158, 11, 0.7), 0 0 8px rgba(255, 215, 0, 0.5); animation: buzzGlow 1.5s ease-in-out infinite; }
+    .buzz-bonus-msg { color: #fbbf24; font-weight: 700; text-align: center; font-size: 0.85rem; margin: -4px 0 6px; letter-spacing: 0.05em; }
+    @keyframes buzzGlow { 0%, 100% { box-shadow: 0 0 24px rgba(245, 158, 11, 0.7), 0 0 8px rgba(255, 215, 0, 0.5); } 50% { box-shadow: 0 0 36px rgba(245, 158, 11, 1), 0 0 16px rgba(255, 215, 0, 0.8); } }
+
+    /* Persistent game status bar */
+    .game-status-bar { position: sticky; top: 0; z-index: 20; width: 100%; max-width: 640px; background: rgba(13, 31, 53, 0.92); backdrop-filter: blur(8px); border: 1px solid #1e3a5f; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-round { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: #00b4d8; letter-spacing: 0.05em; padding-right: 10px; border-right: 1px solid #1e3a5f; }
+    .status-buzz-mini { font-weight: 800; color: #fbbf24; font-size: 0.85rem; letter-spacing: 0.02em; flex: 1; }
+    .status-players { display: flex; gap: 4px; flex-wrap: wrap; }
+    .status-pill { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; background: #1e3a5f; color: #93c5fd; display: inline-flex; align-items: center; gap: 3px; }
+    .status-pill.locked { background: #1a5c3a; color: #6ee7b7; }
+    .status-pill.voted { background: #ffd700; color: #000; }
+
+    /* Mode banner (in lobby) */
+    .mode-banner { background: #0d1f35; border: 1px solid #1e3a5f; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .mode-banner .mode-current { color: #93c5fd; font-size: 0.9rem; font-weight: 600; }
+    .mode-banner .gear-btn { background: transparent; border: 1px solid #1e3a5f; color: #94a3b8; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+    .mode-banner .gear-btn:hover { background: #0f2840; color: #e2e8f0; }
+
+    /* Style picker buttons */
+    .style-btn { padding: 10px 8px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .style-btn .style-name { font-size: 0.85rem; font-weight: 700; }
+    .style-btn .style-desc { font-size: 0.65rem; opacity: 0.7; text-transform: lowercase; letter-spacing: 0.02em; }
+    .style-btn.literal { background: #1a3a5c; color: #93c5fd; }
+    .style-btn.creative { background: #3a1a5c; color: #c4b5fd; }
+    .style-btn.unhinged { background: #5c1a1a; color: #fca5a5; }
+    .style-btn.selected { border-color: #ffd700; transform: translateY(-2px); }
+
+    /* Voting chips */
+    .vote-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 8px 0; }
+    .vote-chip { background: #1e3a5f; color: #93c5fd; padding: 5px 12px; border-radius: 16px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; }
+    .vote-chip.voted { background: #ffd700; color: #000; }
 
     /* Room code */
     .room-code { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #00b4d8; letter-spacing: 0.4em; text-align: center; padding: 16px; background: #0d2137; border-radius: 12px; margin: 12px 0; }
@@ -89,6 +121,13 @@
     <p class="text-base-content/50 italic text-sm mt-1">Pitch terrible business ideas. Win anyway.</p>
   </div>
 
+  <!-- Persistent game status bar (visible during pitching/voting/results) -->
+  <div id="game-status-bar" class="game-status-bar" style="display:none;">
+    <div class="status-round" id="status-round">Round 1</div>
+    <div class="status-buzz-mini" id="status-buzz">⚡ —</div>
+    <div class="status-players" id="status-players"></div>
+  </div>
+
   <!-- HOME -->
   <div id="home" class="screen active">
     <div class="card bg-base-200 shadow-xl mb-4">
@@ -126,31 +165,45 @@
       </div>
     </div>
     <div id="host-voting-mode" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
-      <div class="card-body gap-2">
-        <button id="start-game-btn" class="btn btn-primary w-full" onclick="showJudgingMode()">▶ Start Game</button>
+      <div class="card-body gap-3">
+        <div class="mode-banner">
+          <div>
+            <div class="text-base-content/40 text-xs uppercase tracking-wider">Judge</div>
+            <div class="mode-current" id="current-mode-label">🧂 Super Briney</div>
+          </div>
+          <button class="gear-btn" onclick="toggleModePicker()">⚙️ Change</button>
+        </div>
         <div id="judging-mode-selector" style="display:none;">
-          <h3 class="text-primary font-bold text-lg mb-2 mt-2">Choose Judging Mode</h3>
+          <button class="mode-btn" onclick="setMode('super-briney')">
+            <div class="mode-name">🧂 Super Briney</div>
+            <div class="mode-desc">Impossibly salty investors — cutting, personal, grudging</div>
+          </button>
           <button class="mode-btn" onclick="setMode('players')">
             <div class="mode-name">🗳️ Player Vote</div>
             <div class="mode-desc">Everyone votes on the best pitch (can't vote for yourself)</div>
           </button>
           <button class="mode-btn" onclick="setMode('friends-family')">
-            <div class="mode-name">🥰 Friends & Family</div>
+            <div class="mode-name">🥰 Friends &amp; Family</div>
             <div class="mode-desc">An enthusiastic supporter picks the pitch they'd actually use</div>
           </button>
           <button class="mode-btn" onclick="setMode('venture-capital')">
             <div class="mode-name">📊 Venture Capital</div>
             <div class="mode-desc">Scores on customer problem, feasibility, and revenue potential</div>
           </button>
-          <button class="mode-btn" onclick="setMode('super-briney')">
-            <div class="mode-name">🧂 Super Briney</div>
-            <div class="mode-desc">Impossibly salty shrimp investors — cutting, personal, grudging</div>
-          </button>
         </div>
+        <button id="start-game-btn" class="btn btn-primary w-full" onclick="startGame()">▶ Start Game</button>
       </div>
     </div>
     <div id="guest-lobby-wait" class="card bg-base-200 shadow-xl mb-4" style="display:none;">
-      <div class="card-body"><p class="status waiting">Waiting for host to start the game...</p></div>
+      <div class="card-body items-center gap-2">
+        <div class="mode-banner w-full">
+          <div>
+            <div class="text-base-content/40 text-xs uppercase tracking-wider">Judge</div>
+            <div class="mode-current" id="guest-mode-label">🧂 Super Briney</div>
+          </div>
+        </div>
+        <p class="status waiting">Waiting for host to start the game...</p>
+      </div>
     </div>
   </div>
 
@@ -173,47 +226,47 @@
   <div id="pitching" class="screen">
     <div class="card bg-base-200 shadow-xl mb-4">
       <div class="card-body gap-3">
-        <p class="text-base-content/50 text-center text-sm">This round's Buzz Card:</p>
         <div class="tooltip tooltip-bottom w-full" id="buzz-tooltip" data-tip="">
           <div class="buzz-badge" id="market-display"></div>
         </div>
+        <p id="buzz-bonus-msg" class="buzz-bonus-msg" style="display:none;">⚡ Buzz bonus active!</p>
         <p id="buzz-def-inline" class="text-base-content/30 text-center text-xs italic mb-1"></p>
-        <p class="text-base-content/40 text-center text-xs">Pick 2 cards. Use the Buzz Card for a <span class="text-warning font-semibold">⚡ Bonus Point</span> — or ignore it.<span id="shared-hand-label" style="display:none;" class="ml-2 badge badge-outline badge-xs">Shared Hand</span></p>
+        <p class="text-base-content/40 text-center text-xs">Pick any 2 cards. Use the buzz word for a <span class="text-warning font-semibold">⚡ Bonus</span> — or ignore it.</p>
         <div class="hand" id="hand-display"></div>
 
-        <div id="mode-selector" style="display:none;" class="flex flex-col gap-3 mt-2">
-          <textarea id="pitch-hint" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists')"></textarea>
-          <div>
-            <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style <span class="text-base-content/20">(optional — will pick for you)</span></p>
-            <div class="grid grid-cols-3 gap-2">
-              <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
-              <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
-              <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
-            </div>
-          </div>
-          <button onclick="generateFromSelections()" class="btn btn-primary w-full mt-2">⚡ Generate Pitch</button>
-        </div>
-
-        <div id="pitch-preview" style="display:none;" class="flex flex-col gap-3 mt-2">
+        <!-- Unified pitch area: shows after first auto-generation -->
+        <div id="pitch-area" style="display:none;" class="flex flex-col gap-3 mt-2">
           <div class="bg-base-300 rounded-xl p-4 border border-base-content/10">
             <div id="preview-company" class="pitch-company"></div>
             <div id="preview-tagline" class="pitch-tagline"></div>
             <div id="preview-pitch-text" class="pitch-text"></div>
           </div>
-          <button onclick="lockInPitch()" class="btn btn-primary w-full">✅ Lock In This Pitch</button>
-          <div class="divider text-xs text-base-content/30">or regenerate</div>
-          <textarea id="pitch-hint-regen" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder="Optional: guide the regeneration..."></textarea>
+          <button onclick="lockInPitch()" id="lock-in-btn" class="btn btn-primary w-full">✅ Lock In This Pitch</button>
+
+          <div class="divider text-xs text-base-content/30">or push it your way</div>
+
+          <textarea id="pitch-angle" class="textarea textarea-bordered w-full text-sm" rows="2" placeholder=""></textarea>
           <div>
             <p class="text-base-content/40 text-xs font-semibold uppercase tracking-wider mb-2">💡 Idea style</p>
             <div class="grid grid-cols-3 gap-2">
-              <button onclick="selectRegenIdeaMode('literal')" id="ribtn-literal" class="btn btn-sm" style="background:#1a3a5c; border:2px solid transparent; color:#93c5fd;">🔩 Literal</button>
-              <button onclick="selectRegenIdeaMode('creative')" id="ribtn-creative" class="btn btn-sm" style="background:#3a1a5c; border:2px solid transparent; color:#c4b5fd;">✨ Creative</button>
-              <button onclick="selectRegenIdeaMode('unhinged')" id="ribtn-unhinged" class="btn btn-sm" style="background:#5c1a1a; border:2px solid transparent; color:#fca5a5;">🤪 Unhinged</button>
+              <button onclick="selectIdeaMode('literal')" id="ibtn-literal" class="style-btn literal">
+                <div class="style-name">🔩 Literal</div>
+                <div class="style-desc">exact combo</div>
+              </button>
+              <button onclick="selectIdeaMode('creative')" id="ibtn-creative" class="style-btn creative">
+                <div class="style-name">✨ Creative</div>
+                <div class="style-desc">remix</div>
+              </button>
+              <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" class="style-btn unhinged selected">
+                <div class="style-name">🤪 Unhinged</div>
+                <div class="style-desc">reckless</div>
+              </button>
             </div>
           </div>
-          <button onclick="regenFromSelections()" class="btn btn-outline w-full mt-2">🔄 Regenerate Pitch</button>
+          <button onclick="regenerate()" class="btn btn-outline w-full">🔄 Regenerate Pitch</button>
         </div>
-        <p class="status" id="pitch-status"></p>
+
+        <p class="status" id="pitch-status">Pick 2 cards</p>
       </div>
     </div>
   </div>
@@ -244,7 +297,10 @@
     <div id="pitches-display"></div>
     <div id="player-vote-controls" style="display:none;">
       <div class="card bg-base-200 shadow-xl mb-4">
-        <div class="card-body"><p class="status" id="vote-count-status"></p></div>
+        <div class="card-body gap-2">
+          <p class="text-base-content/50 text-center text-xs uppercase tracking-wider">Votes</p>
+          <div class="vote-chips" id="vote-chips"></div>
+        </div>
       </div>
     </div>
     <div id="shrimp-controls" style="display:none;">
@@ -263,7 +319,11 @@
   <div id="results" class="screen">
     <div id="winner-banner"></div>
     <div id="shrimp-verdict-display"></div>
-    <div id="results-pitches"></div>
+    <div id="winning-pitch-display"></div>
+    <details class="card bg-base-200 shadow-xl mb-4">
+      <summary class="card-body cursor-pointer text-base-content/60 text-sm font-semibold">📋 See all pitches</summary>
+      <div id="other-pitches-display" class="px-6 pb-6"></div>
+    </details>
     <div class="card bg-base-200 shadow-xl mb-4">
       <div class="card-body">
         <h3 class="text-primary font-bold mb-3">Scoreboard</h3>
@@ -280,23 +340,52 @@
     let myName = "", isHost = false, roomCode = "";
     let gameRoom = {};
     let selectedIndices = [];
+    let selectedIdeaMode = "unhinged";
+    let currentPitch = null;
+    let isPitchLocked = false;
+    let lockedInPlayers = new Set();
+    let voters = new Set();
+
+    const IDEA_MODES = ['literal','creative','unhinged'];
+    const MODE_LABELS = {
+      "super-briney": "🧂 Super Briney",
+      "players": "🗳️ Player Vote",
+      "friends-family": "🥰 Friends & Family",
+      "venture-capital": "📊 Venture Capital",
+    };
 
     function show(id) {
       document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
+      const showStatusBar = ["pitching","waiting-pitches","voting","results"].includes(id);
+      document.getElementById("game-status-bar").style.display = showStatusBar ? "flex" : "none";
     }
 
     function esc(str) {
       return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
-    let pitchMode = "literal";
-    let currentPitchMode = "literal";
-    let lockedPitch = null;
+    // ------------------- STATUS BAR -------------------
+    function updateStatusBar(room) {
+      if (!room) return;
+      document.getElementById("status-round").textContent = `Round ${room.round || 1}`;
+      document.getElementById("status-buzz").textContent = `⚡ ${room.buzzWord || "—"}`;
+      renderStatusPlayers(room);
+    }
 
-    function setPitchMode(mode) { pitchMode = mode; }
+    function renderStatusPlayers(room) {
+      const el = document.getElementById("status-players");
+      if (!room?.players) { el.innerHTML = ""; return; }
+      el.innerHTML = room.players.map(p => {
+        const locked = lockedInPlayers.has(p.name) || (room.pitches && room.pitches[p.name]);
+        const voted = voters.has(p.name);
+        const cls = voted ? "voted" : (locked ? "locked" : "");
+        const icon = voted ? "✅" : (locked ? "🔒" : "⏳");
+        return `<span class="status-pill ${cls}">${icon} ${esc(p.name)}</span>`;
+      }).join("");
+    }
 
-    // HOME
+    // ------------------- HOME -------------------
     function toggleJoin() {
       const s = document.getElementById("join-section");
       s.style.display = s.style.display === "none" ? "flex" : "none";
@@ -309,7 +398,12 @@
       isHost = true;
       socket.emit("create-room", myName, vsAi, true, ({ code, room }) => {
         roomCode = code; gameRoom = room;
-        renderLobby(room); show("lobby");
+        if (vsAi) {
+          // Solo play: skip lobby, kick straight into a round
+          socket.emit("start-game");
+        } else {
+          renderLobby(room); show("lobby");
+        }
       });
     }
 
@@ -325,7 +419,7 @@
       });
     }
 
-    // LOBBY
+    // ------------------- LOBBY -------------------
     function renderLobby(room) {
       document.getElementById("display-code").textContent = room.code;
       document.getElementById("player-list").innerHTML = room.players
@@ -335,16 +429,25 @@
       document.getElementById("host-voting-mode").style.display = isHost ? "block" : "none";
       document.getElementById("guest-lobby-wait").style.display = isHost ? "none" : "block";
       document.getElementById("room-code-card").style.display = room.vsAi ? "none" : "block";
-      if (isHost) {
-        document.getElementById("start-game-btn").style.display = "block";
-        document.getElementById("judging-mode-selector").style.display = "none";
-      }
+      const modeLabel = MODE_LABELS[room.votingMode] || MODE_LABELS["super-briney"];
+      const hLabel = document.getElementById("current-mode-label");
+      const gLabel = document.getElementById("guest-mode-label");
+      if (hLabel) hLabel.textContent = modeLabel;
+      if (gLabel) gLabel.textContent = modeLabel;
+      document.getElementById("judging-mode-selector").style.display = "none";
     }
 
-    function showJudgingMode() {
-      document.getElementById("start-game-btn").style.display = "none";
-      document.getElementById("judging-mode-selector").style.display = "block";
+    function toggleModePicker() {
+      const sel = document.getElementById("judging-mode-selector");
+      sel.style.display = sel.style.display === "none" ? "block" : "none";
     }
+
+    function setMode(mode) {
+      socket.emit("set-voting-mode", mode);
+      document.getElementById("judging-mode-selector").style.display = "none";
+    }
+
+    function startGame() { socket.emit("start-game"); }
 
     function changeName() {
       const newName = document.getElementById("lobby-name").value.trim();
@@ -358,49 +461,77 @@
       });
     }
 
-    function setMode(mode) { socket.emit("set-voting-mode", mode); }
-
-    // DEALING
+    // ------------------- DEALING -------------------
     function showDealing(room) {
       document.getElementById("round-num").textContent = room.round + 1;
       document.getElementById("host-deal").style.display = isHost ? "block" : "none";
       document.getElementById("guest-deal-wait").style.display = isHost ? "none" : "block";
       show("dealing");
+      // Solo play: auto-deal so the host doesn't have to click
+      if (isHost && room.vsAi) socket.emit("deal-round", roomCode);
     }
 
     function dealRound() { socket.emit("deal-round", roomCode); }
 
-    // PITCHING
+    // ------------------- PITCHING -------------------
+    const ANGLE_PLACEHOLDERS = [
+      "make it about dentists",
+      "set it in 1987",
+      "add Oprah as the spokesperson",
+      "involve a llama",
+      "1980s aerobics video vibe",
+      "make it Texan",
+      "for cats only",
+      "but it's a cult",
+    ];
+    let angleRotateTimer = null;
+
+    function startAnglePlaceholderRotation() {
+      const ta = document.getElementById("pitch-angle");
+      let i = Math.floor(Math.random() * ANGLE_PLACEHOLDERS.length);
+      ta.setAttribute("placeholder", `your angle... e.g. "${ANGLE_PLACEHOLDERS[i]}"`);
+      if (angleRotateTimer) clearInterval(angleRotateTimer);
+      angleRotateTimer = setInterval(() => {
+        if (document.activeElement === ta || ta.value.length > 0) return;
+        i = (i + 1) % ANGLE_PLACEHOLDERS.length;
+        ta.setAttribute("placeholder", `your angle... e.g. "${ANGLE_PLACEHOLDERS[i]}"`);
+      }, 3500);
+    }
+
     function showPitching(room) {
       gameRoom = room;
       selectedIndices = [];
-      lockedPitch = null;
-      selectedIdeaMode = null;
-      selectedRegenIdeaMode = null;
+      currentPitch = null;
+      isPitchLocked = false;
+      selectedIdeaMode = "unhinged";
+      lockedInPlayers = new Set();
+      voters = new Set();
+      updateStatusBar(room);
+
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
-      document.getElementById("buzz-inline") && (document.getElementById("buzz-inline").textContent = room.buzzWord);
+      document.getElementById("market-display").classList.remove("active");
+      document.getElementById("buzz-bonus-msg").style.display = "none";
       const buzzTip = document.getElementById("buzz-tooltip");
       if (buzzTip) buzzTip.setAttribute("data-tip", room.buzzWordDef || "");
-      const buzzDef = document.getElementById("buzz-def-inline");
-      if (buzzDef) buzzDef.textContent = room.buzzWordDef || "";
-      const sharedLabel = document.getElementById("shared-hand-label");
-      if (sharedLabel) sharedLabel.style.display = room.sharedHand ? "inline-flex" : "none";
-      document.getElementById("mode-selector").style.display = "none";
-      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => { b.disabled = false; b.style.borderColor = 'transparent'; });
-      document.getElementById("pitch-preview").style.display = "none";
-      document.getElementById("pitch-hint").value = "";
-      if (document.getElementById("pitch-hint-regen")) document.getElementById("pitch-hint-regen").value = "";
+      document.getElementById("buzz-def-inline").textContent = room.buzzWordDef || "";
+
+      document.getElementById("pitch-area").style.display = "none";
+      document.getElementById("pitch-angle").value = "";
+      setStyleSelection("unhinged");
+      startAnglePlaceholderRotation();
+
       const hand = room.hands[myName] || [];
       document.getElementById("hand-display").innerHTML = hand.map((c, i) => `
         <div class="game-card ${c.type}" id="card-${i}" onclick="toggleCard(${i})">
           <div class="card-type">${c.type}</div>
           <div class="card-text">${esc(c.text)}</div>
         </div>`).join("");
-      document.getElementById("pitch-status").textContent = "Select 2 cards";
+      document.getElementById("pitch-status").textContent = "Pick 2 cards";
       show("pitching");
     }
 
     function toggleCard(i) {
+      if (isPitchLocked) return;
       if (selectedIndices.includes(i)) {
         selectedIndices = selectedIndices.filter(x => x !== i);
         document.getElementById(`card-${i}`).classList.remove("selected");
@@ -408,99 +539,79 @@
         selectedIndices.push(i);
         document.getElementById(`card-${i}`).classList.add("selected");
       }
-      const ready = selectedIndices.length === 2;
-      document.getElementById("mode-selector").style.display = ready ? "block" : "none";
-      document.getElementById("pitch-preview").style.display = "none";
-      lockedPitch = null;
-      document.getElementById("pitch-status").textContent = ready
-        ? "Choose your pitch style above!" : `Select ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
+      if (selectedIndices.length === 2) {
+        autoGeneratePitch();
+      } else {
+        document.getElementById("pitch-area").style.display = "none";
+        currentPitch = null;
+        document.getElementById("pitch-status").textContent =
+          `Pick ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
+      }
     }
 
-    let selectedIdeaMode = null;
-    let selectedRegenIdeaMode = null;
-
-    const IDEA_MODES = ['literal','creative','unhinged'];
-
-    function selectIdeaMode(mode) {
-      selectedIdeaMode = selectedIdeaMode === mode ? null : mode;
+    function setStyleSelection(mode) {
+      selectedIdeaMode = mode;
       IDEA_MODES.forEach(m => {
         const btn = document.getElementById(`ibtn-${m}`);
-        if (btn) btn.style.borderColor = m === selectedIdeaMode ? '#ffd700' : 'transparent';
+        if (btn) btn.classList.toggle("selected", m === mode);
       });
     }
 
-    function selectRegenIdeaMode(mode) {
-      selectedRegenIdeaMode = selectedRegenIdeaMode === mode ? null : mode;
-      IDEA_MODES.forEach(m => {
-        const btn = document.getElementById(`ribtn-${m}`);
-        if (btn) btn.style.borderColor = m === selectedRegenIdeaMode ? '#ffd700' : 'transparent';
-      });
+    function selectIdeaMode(mode) {
+      setStyleSelection(mode);
     }
 
-    function _resolvePitchMode(ideaMode) {
-      if (ideaMode) return ideaMode;
-      return IDEA_MODES[Math.floor(Math.random() * IDEA_MODES.length)];
+    async function autoGeneratePitch() {
+      // First pitch on selection — no angle, use default unhinged
+      await generatePitch();
     }
 
-    function generateFromSelections() {
-      const mode = _resolvePitchMode(selectedIdeaMode);
-      const hint = document.getElementById("pitch-hint").value.trim();
-      previewPitch(mode, hint);
+    async function regenerate() {
+      await generatePitch();
     }
 
-    function regenFromSelections() {
-      const mode = _resolvePitchMode(selectedRegenIdeaMode);
-      const hint = document.getElementById("pitch-hint-regen").value.trim();
-      previewPitch(mode, hint);
-    }
-
-    function showModeSelector() {
-      document.getElementById("pitch-preview").style.display = "none";
-      document.getElementById("mode-selector").style.display = "block";
-      lockedPitch = null;
-    }
-
-    async function previewPitch(mode, hint) {
-      currentPitchMode = mode;
-      if (hint === undefined) hint = document.getElementById("pitch-hint").value.trim();
+    async function generatePitch() {
+      if (selectedIndices.length !== 2) return;
+      const angle = document.getElementById("pitch-angle").value.trim();
       const hand = gameRoom.hands[myName] || [];
       const card1 = hand[selectedIndices[0]];
       const card2 = hand[selectedIndices[1]];
-      await _generatePreview(card1, card2, mode, hint);
-    }
-
-    async function regenPitch(mode) {
-      const hint = document.getElementById("pitch-hint-regen").value.trim();
-      await previewPitch(mode, hint);
-    }
-
-    async function _generatePreview(card1, card2, mode, hint) {
       document.getElementById("pitch-status").textContent = "⏳ Generating...";
-      document.querySelectorAll("#mode-selector button, #pitch-preview button").forEach(b => b.disabled = true);
+      document.querySelectorAll("#pitch-area button, .style-btn").forEach(b => b.disabled = true);
       try {
         const res = await fetch("/api/pitch-preview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ card1, card2, buzzWord: gameRoom.buzzWord, pitchMode: mode, hint: hint || null }),
+          body: JSON.stringify({ card1, card2, buzzWord: gameRoom.buzzWord, pitchMode: selectedIdeaMode, hint: angle || null }),
         });
         const pitch = await res.json();
+        currentPitch = pitch;
         document.getElementById("preview-company").textContent = pitch.companyName;
         document.getElementById("preview-tagline").textContent = `"${pitch.tagline}"`;
         document.getElementById("preview-pitch-text").textContent = pitch.pitch;
-        document.getElementById("pitch-preview").style.display = "block";
-        document.getElementById("mode-selector").style.display = "none";
-        lockedPitch = pitch;
+        document.getElementById("pitch-area").style.display = "flex";
         document.getElementById("pitch-status").textContent = "";
+        applyBuzzGlow(pitch);
       } catch (e) {
         document.getElementById("pitch-status").textContent = "Error generating pitch. Try again.";
       } finally {
-        document.querySelectorAll("#mode-selector button, #pitch-preview button").forEach(b => b.disabled = false);
+        document.querySelectorAll("#pitch-area button, .style-btn").forEach(b => b.disabled = false);
       }
     }
 
+    function applyBuzzGlow(pitch) {
+      const buzz = (gameRoom.buzzWord || "").toLowerCase();
+      if (!buzz) return;
+      const blob = `${pitch.companyName || ""} ${pitch.tagline || ""} ${pitch.pitch || ""}`.toLowerCase();
+      const used = blob.includes(buzz);
+      document.getElementById("market-display").classList.toggle("active", used);
+      document.getElementById("buzz-bonus-msg").style.display = used ? "block" : "none";
+    }
+
     function lockInPitch() {
-      if (!lockedPitch || selectedIndices.length !== 2) return;
-      document.querySelectorAll("#pitch-preview button").forEach(b => b.disabled = true);
+      if (!currentPitch || selectedIndices.length !== 2) return;
+      isPitchLocked = true;
+      document.querySelectorAll("#pitch-area button, .style-btn, .game-card").forEach(b => b.disabled = true);
       document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
       const wt = document.getElementById("waiting-buzz-tooltip");
       if (wt) wt.setAttribute("data-tip", gameRoom.buzzWordDef || "");
@@ -508,27 +619,27 @@
         ? "Pitch locked in! Waiting for The Algorithm..."
         : "Pitch locked in! Waiting for others...";
       show("waiting-pitches");
-      socket.emit("select-cards", selectedIndices, currentPitchMode, lockedPitch);
+      socket.emit("select-cards", selectedIndices, selectedIdeaMode, currentPitch);
     }
 
-    function submitCards(mode) { previewPitch(mode); }
-
-    // VOTING
+    // ------------------- VOTING -------------------
     function showVoting(room) {
       gameRoom = room;
+      voters = new Set();
+      updateStatusBar(room);
       document.getElementById("voting-market").textContent = `⚡ ${room.buzzWord}`;
       const vt = document.getElementById("voting-buzz-tooltip");
       if (vt) vt.setAttribute("data-tip", room.buzzWordDef || "");
       const isShrimp = room.votingMode !== "players";
 
-      const modeLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged"};
+      const styleLabels = {literal:"🔩 Literal",creative:"✨ Creative",unhinged:"🤪 Unhinged"};
       document.getElementById("pitches-display").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
         const cards = room.selections[pn] || [];
         const canVote = !isShrimp && pn !== myName;
         const modeUsed = room.pitchModes?.[pn];
         return `
           <div class="pitch-card">
-            <div class="pitch-player">Pitched by ${esc(pn)}${modeUsed ? ` <span style="color:#aaa;font-size:0.8rem;">${modeLabels[modeUsed]||""}</span>` : ""}</div>
+            <div class="pitch-player">Pitched by ${esc(pn)}${modeUsed ? ` <span style="color:#aaa;font-size:0.8rem;">${styleLabels[modeUsed]||""}</span>` : ""}</div>
             <div class="pitch-cards">${cards.map(c => `<span class="mini-card ${c.type}">${esc(c.text)}</span>`).join("")}</div>
             <div class="pitch-company">${esc(p.companyName)}</div>
             <div class="pitch-tagline">"${esc(p.tagline)}"</div>
@@ -539,11 +650,20 @@
 
       document.getElementById("player-vote-controls").style.display = !isShrimp ? "block" : "none";
       document.getElementById("shrimp-controls").style.display = isShrimp ? "block" : "none";
+      if (!isShrimp) renderVoteChips(room);
       if (isShrimp) {
         document.getElementById("host-shrimp-btn-wrap").style.display = isHost ? "block" : "none";
         document.getElementById("shrimp-thinking-msg").style.display = "none";
       }
       show("voting");
+    }
+
+    function renderVoteChips(room) {
+      const el = document.getElementById("vote-chips");
+      el.innerHTML = room.players.map(p => {
+        const has = voters.has(p.name);
+        return `<span class="vote-chip ${has ? "voted" : ""}">${has ? "✅" : "⏳"} ${esc(p.name)}</span>`;
+      }).join("");
     }
 
     function castVote(votedFor) {
@@ -556,8 +676,6 @@
       document.getElementById("host-shrimp-btn-wrap").style.display = "none";
       const msg = document.getElementById("shrimp-thinking-msg");
       msg.style.display = "block";
-
-      // Animated messages so it doesn't feel stuck
       const lines = [
         "🦐 The Shrimp is deliberating...",
         "🦐 Reviewing the financials...",
@@ -570,22 +688,20 @@
         i = Math.min(i + 1, lines.length - 1);
         msg.querySelector("p").textContent = lines[i];
       }, 4000);
-
-      // Timeout fallback after 20s
       const timeout = setTimeout(() => {
         clearInterval(interval);
         msg.querySelector("p").textContent = "⚠️ The Shrimp is unavailable. Try again.";
         document.getElementById("host-shrimp-btn-wrap").style.display = "block";
         msg.style.display = "none";
       }, 20000);
-
       socket.once("results", () => { clearInterval(interval); clearTimeout(timeout); });
       socket.emit("request-shrimp-verdict");
     }
 
-    // RESULTS
+    // ------------------- RESULTS -------------------
     function showResults(room) {
       gameRoom = room;
+      updateStatusBar(room);
       document.getElementById("winner-banner").innerHTML = room.winner
         ? `<div class="winner-banner">🏆 ${esc(room.winner)} is FUNDED!</div>` : "";
 
@@ -594,23 +710,31 @@
             <div class="label">🦐 The Shrimp says:</div>
             <div class="text">${esc(room.shrimpVote.reasoning)}</div>
             ${room.shrimpVote.buzzBonus ? `<div class="mt-3 pt-3 border-t border-warning/30">
-              <div class="label">⚡ Buzz Card Bonus → ${esc(room.shrimpVote.buzzBonus)}</div>
+              <div class="label">⚡ Buzz Bonus → ${esc(room.shrimpVote.buzzBonus)}</div>
               <div class="text">${esc(room.shrimpVote.buzzBonusReason || "")}</div>
             </div>` : ""}
           </div>` : "";
 
-      document.getElementById("results-pitches").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
+      const renderPitchCard = ([pn, p], emphasize) => {
         const cards = room.selections[pn] || [];
         const voteCount = room.tally?.[pn] || 0;
         return `
-          <div class="pitch-card" style="${pn === room.winner ? "border-color:#ffd700;" : ""}">
+          <div class="pitch-card ${emphasize ? "winner" : ""}">
             <div class="pitch-player">${esc(pn)} ${voteCount > 0 ? `· ${voteCount} vote${voteCount > 1 ? "s" : ""}` : ""}</div>
             <div class="pitch-cards">${cards.map(c => `<span class="mini-card ${c.type}">${esc(c.text)}</span>`).join("")}</div>
             <div class="pitch-company">${esc(p.companyName)}</div>
             <div class="pitch-tagline">"${esc(p.tagline)}"</div>
             <div class="pitch-text">${esc(p.pitch)}</div>
           </div>`;
-      }).join("");
+      };
+
+      const entries = Object.entries(room.pitches);
+      const winnerEntry = entries.find(([pn]) => pn === room.winner);
+      const others = entries.filter(([pn]) => pn !== room.winner);
+      document.getElementById("winning-pitch-display").innerHTML =
+        winnerEntry ? renderPitchCard(winnerEntry, true) : "";
+      document.getElementById("other-pitches-display").innerHTML =
+        others.map(e => renderPitchCard(e, false)).join("");
 
       document.getElementById("scoreboard").innerHTML = room.players
         .map(p => {
@@ -625,7 +749,7 @@
 
     function nextRound() { socket.emit("next-round"); }
 
-    // SOCKET EVENTS
+    // ------------------- SOCKET EVENTS -------------------
     socket.on("room-updated", (room) => {
       gameRoom = room;
       if (room.state === "lobby") renderLobby(room);
@@ -642,8 +766,10 @@
       showPitching(room);
     });
 
-    socket.on("player-selected", ({ count, total }) => {
+    socket.on("player-selected", ({ lockedInPlayers: locked, count, total }) => {
+      if (locked) lockedInPlayers = new Set(locked);
       document.getElementById("pitch-wait-status").textContent = `${count}/${total} players ready...`;
+      renderStatusPlayers(gameRoom);
     });
 
     socket.on("generating-pitches", () => {
@@ -659,8 +785,10 @@
       showVoting(room);
     });
 
-    socket.on("vote-cast", ({ count, total }) => {
-      document.getElementById("vote-count-status").textContent = `${count}/${total} votes cast...`;
+    socket.on("vote-cast", ({ voters: vList }) => {
+      if (vList) voters = new Set(vList);
+      renderVoteChips(gameRoom);
+      renderStatusPlayers(gameRoom);
     });
 
     socket.on("shrimp-thinking", () => {

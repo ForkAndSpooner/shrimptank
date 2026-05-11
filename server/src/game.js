@@ -45,7 +45,7 @@ export function createRoom(hostName, vsAi = false, sharedHand = true) {
     players,
     vsAi,
     sharedHand,
-    votingMode: null,
+    votingMode: "super-briney",
     market: null,
     buzzWord: null,
     hands: {},
@@ -79,6 +79,12 @@ export function setVotingMode(code, mode) {
   const room = rooms.get(code.toUpperCase());
   if (!room) return null;
   room.votingMode = mode;
+  return room;
+}
+
+export function startGame(code) {
+  const room = rooms.get(code.toUpperCase());
+  if (!room || room.state !== "lobby") return null;
   room.state = "dealing";
   return room;
 }
