@@ -1,28 +1,23 @@
 export async function generatePitch(market, card1, card2, playerName, buzzWord = null) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return mockPitch(market, card1, card2, buzzWord);
-
-  const buzzLine = buzzWord
-    ? `BUZZ WORD: "${buzzWord}" — your product MUST incorporate this as a core feature, not an afterthought.`
-    : "";
+  if (!apiKey) return mockPitch(card1, card2, buzzWord);
 
   const prompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
 
-MARKET: ${market}
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
-${buzzLine}
+BUZZ WORD: "${buzzWord}"
 
-Your product MUST literally combine both cards — they are not metaphors, they are the actual product. The customer is specifically someone in the ${market} context.${buzzWord ? ` The ${buzzWord} aspect must be central to why this works.` : ""}
+Your product literally combines both cards, and "${buzzWord}" is the core technology or angle that makes it work. You decide who the customer is — pick whoever makes the most logical (or delightfully absurd) sense given the combination.
 
 Write 2-3 sentences:
-- Sentence 1: Name the company and state exactly what the product is (combining both cards${buzzWord ? ` and ${buzzWord}` : ""})
-- Sentence 2: The obvious problem it solves for ${market} customers, and why your solution is the only logical answer
+- Sentence 1: Name the company, state exactly what the product is, and who it's for
+- Sentence 2: The obvious problem it solves and why "${buzzWord}" is the only logical solution
 - Sentence 3: One confident market size claim + your ask (dollar amount + equity %)
 
 Rules:
 - Never acknowledge the idea is unusual. This is completely normal.
-- The tagline should literally describe what the product is, not a marketing slogan.
+- The tagline should literally describe what the product is in 6 words or fewer.
 - No bullet points. One tight paragraph.
 
 Respond in JSON only:
@@ -60,8 +55,6 @@ export async function generateShrimpVerdict(market, pitches, mode) {
   };
 
   const prompt = `${modeInstructions[mode]}
-
-MARKET: ${market}
 
 THE PITCHES:
 ${Object.entries(pitches).map(([player, p]) => `${player} — ${p.companyName} ("${p.tagline}")\n"${p.pitch}"`).join("\n\n")}
@@ -122,12 +115,11 @@ export async function generateAiOpponentPitch(market, hand, buzzWord = null) {
   return { pitch, selections: [card1, card2] };
 }
 
-function mockPitch(market, card1, card2, buzzWord) {
-  const buzz = buzzWord ? ` powered by ${buzzWord}` : "";
+function mockPitch(card1, card2, buzzWord) {
   return {
     companyName: `${card1.text.split(" ")[0]}${card2.text.split(" ")[0]}ly`.replace(/\s/g, ""),
     tagline: `${card1.text} meets ${card2.text}`,
-    pitch: `We're seeking $1.5M for 10% equity. Our platform combines ${card1.text} and ${card2.text}${buzz} to disrupt the ${market} space. The market is $50B and we're positioned to capture 0.1% in year one.`,
+    pitch: `We're seeking $1.5M for 10% equity. Our ${buzzWord || "innovative"} platform combines ${card1.text} and ${card2.text} to solve a problem nobody knew they had. The market is $50B and we're positioned to capture 0.1% in year one.`,
   };
 }
 
