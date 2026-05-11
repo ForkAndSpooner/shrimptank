@@ -30,7 +30,7 @@ function drawCards(n) {
 
 export const AI_PLAYER = "🤖 The Algorithm";
 
-export function createRoom(hostName, vsAi = false, buzzMode = false) {
+export function createRoom(hostName, vsAi = false, buzzMode = false, pitchMode = "literal") {
   const code = generateRoomCode();
   const players = [{ name: hostName }];
   if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
@@ -42,7 +42,8 @@ export function createRoom(hostName, vsAi = false, buzzMode = false) {
     players,
     vsAi,
     buzzMode,
-    votingMode: null, // "friends-family" | "venture-capital" | "evil-tech-bro"
+    pitchMode, // "literal" | "creative"
+    votingMode: null,
     market: null,
     buzzWord: null,
     hands: {},
