@@ -20,6 +20,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(join(__dirname, "..", "public")));
 
+// Generate a pitch preview (for regenerate/hint flow — doesn't lock in)
+app.post("/api/pitch-preview", async (req, res) => {
+  const { card1, card2, buzzWord, pitchMode, hint } = req.body;
+  if (!card1 || !card2 || !buzzWord || !pitchMode) return res.status(400).json({ error: "Missing fields" });
+  try {
+    const pitch = await generatePitch(null, card1, card2, "preview", buzzWord, pitchMode, hint);
+    res.json(pitch);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 io.on("connection", (socket) => {
   let currentRoom = null;
   let playerName = null;
@@ -61,8 +73,9 @@ io.on("connection", (socket) => {
   });
 
   // Player selects 2 cards from their hand
-  socket.on("select-cards", async (cardIndices, pitchMode, cb) => {
-    if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; }
+  socket.on("select-cards", async (cardIndices, pitchMode, preGeneratedPitch, cb) => {
+    if (typeof pitchMode === "function") { cb = pitchMode; pitchMode = "literal"; preGeneratedPitch = null; }
+    else if (typeof preGeneratedPitch === "function") { cb = preGeneratedPitch; preGeneratedPitch = null; }
     const room = getRoom(currentRoom);
     if (!room) return;
     const updated = selectCards(currentRoom, playerName, cardIndices, pitchMode);
@@ -87,7 +100,10 @@ io.on("connection", (socket) => {
         }
         const [c1, c2] = updated.selections[p.name];
         const playerPitchMode = updated.pitchModes?.[p.name] || "literal";
-        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, playerPitchMode);
+        // Use pre-generated pitch if this is the submitting player and one was provided
+        const pitch = (p.name === playerName && preGeneratedPitch)
+          ? preGeneratedPitch
+          : await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord, playerPitchMode);
         return { playerName: p.name, pitch };
       });
 
@@ -116,7 +132,7 @@ io.on("connection", (socket) => {
   socket.on("request-shrimp-verdict", async () => {
     const room = getRoom(currentRoom);
     if (!room || playerName !== room.host) return;
-    if (!["friends-family", "venture-capital", "evil-tech-bro"].includes(room.votingMode)) return;
+    if (!["friends-family", "venture-capital", "the-sharks"].includes(room.votingMode)) return;
     io.to(currentRoom).emit("shrimp-thinking");
     try {
       const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode);
