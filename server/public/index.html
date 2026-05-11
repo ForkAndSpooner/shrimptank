@@ -132,22 +132,25 @@
       <div class="market-badge" id="market-display"></div>
       <p style="color:#aaa; text-align:center; margin-bottom:12px; font-size:0.9rem;">Pick 2 cards — your product must use <strong id="buzz-inline"></strong>:</p>
       <div class="hand" id="hand-display"></div>
-      <!-- Hint + mode selector: shown after 2 cards selected -->
+
+      <!-- Mode selector: shown after 2 cards selected -->
       <div id="mode-selector" style="display:none; margin-top:12px;">
-        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists' or 'the founder is a retired pirate')" style="min-height:60px; font-size:0.85rem; width:100%; margin-bottom:10px;"></textarea>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;">
-          <button onclick="previewPitch('literal')" style="font-size:0.8rem; padding:10px; background:#1a3a5c;">🔩 Literal</button>
-          <button onclick="previewPitch('creative')" style="font-size:0.8rem; padding:10px; background:#3a1a5c;">✨ Creative</button>
-          <button onclick="previewPitch('unhinged')" style="font-size:0.8rem; padding:10px; background:#5c1a1a;">🤪 Unhinged</button>
+        <textarea id="pitch-hint" placeholder="Optional: guide the pitch... (e.g. 'make it about dentists')" style="min-height:55px; font-size:0.85rem; width:100%; margin-bottom:10px;"></textarea>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style <span style="color:#555;">(optional — will pick for you)</span>:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;" id="idea-btns">
+          <button onclick="selectIdeaMode('literal')" id="ibtn-literal" style="font-size:0.8rem; padding:10px; background:#1a3a5c; border:2px solid transparent;">🔩 Literal</button>
+          <button onclick="selectIdeaMode('creative')" id="ibtn-creative" style="font-size:0.8rem; padding:10px; background:#3a1a5c; border:2px solid transparent;">✨ Creative</button>
+          <button onclick="selectIdeaMode('unhinged')" id="ibtn-unhinged" style="font-size:0.8rem; padding:10px; background:#5c1a1a; border:2px solid transparent;">🤪 Unhinged</button>
         </div>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-          <button onclick="previewPitch('infomercial')" style="font-size:0.8rem; padding:10px; background:#1a5c3a;">📺 Infomercial</button>
-          <button onclick="previewPitch('siliconvalley')" style="font-size:0.8rem; padding:10px; background:#3a3a1a;">🚀 Tech Bro</button>
-          <button onclick="previewPitch('government')" style="font-size:0.8rem; padding:10px; background:#2a2a2a;">🏛️ Gov Contract</button>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style <span style="color:#555;">(optional — will pick for you)</span>:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:12px;" id="delivery-btns">
+          <button onclick="selectDeliveryMode('infomercial')" id="dbtn-infomercial" style="font-size:0.8rem; padding:10px; background:#1a5c3a; border:2px solid transparent;">📺 Infomercial</button>
+          <button onclick="selectDeliveryMode('siliconvalley')" id="dbtn-siliconvalley" style="font-size:0.8rem; padding:10px; background:#3a3a1a; border:2px solid transparent;">🚀 Tech Bro</button>
+          <button onclick="selectDeliveryMode('government')" id="dbtn-government" style="font-size:0.8rem; padding:10px; background:#2a2a2a; border:2px solid transparent;">🏛️ Gov Contract</button>
         </div>
+        <button onclick="generateFromSelections()" style="background:#00b4d8; color:#000;">⚡ Generate Pitch</button>
       </div>
+
       <!-- Preview: shown after pitch generated -->
       <div id="pitch-preview" style="display:none; margin-top:12px;">
         <div style="background:#0d2137; border:2px solid #1d6a8a; border-radius:10px; padding:16px; margin-bottom:10px;">
@@ -155,21 +158,22 @@
           <div id="preview-tagline" style="color:#ffd700; font-style:italic; font-size:0.85rem; margin:4px 0 10px;"></div>
           <div id="preview-pitch-text" style="color:#ccc; font-size:0.9rem; line-height:1.5;"></div>
         </div>
-        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:10px;">✅ Lock In This Pitch</button>
-        <!-- Inline regenerate: hint + all mode buttons -->
+        <button onclick="lockInPitch()" style="background:#00b4d8; color:#000; margin-bottom:12px;">✅ Lock In This Pitch</button>
+        <hr style="border-color:#333; margin-bottom:12px;">
         <textarea id="pitch-hint-regen" placeholder="Optional: guide the regeneration..." style="min-height:50px; font-size:0.85rem; width:100%; margin-bottom:8px;"></textarea>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Regenerate with idea style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
-          <button onclick="regenPitch('literal')" style="font-size:0.75rem; padding:8px; background:#1a3a5c;">🔩 Literal</button>
-          <button onclick="regenPitch('creative')" style="font-size:0.75rem; padding:8px; background:#3a1a5c;">✨ Creative</button>
-          <button onclick="regenPitch('unhinged')" style="font-size:0.75rem; padding:8px; background:#5c1a1a;">🤪 Unhinged</button>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">💡 Idea style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;" id="regen-idea-btns">
+          <button onclick="selectRegenIdeaMode('literal')" id="ribtn-literal" style="font-size:0.75rem; padding:8px; background:#1a3a5c; border:2px solid transparent;">🔩 Literal</button>
+          <button onclick="selectRegenIdeaMode('creative')" id="ribtn-creative" style="font-size:0.75rem; padding:8px; background:#3a1a5c; border:2px solid transparent;">✨ Creative</button>
+          <button onclick="selectRegenIdeaMode('unhinged')" id="ribtn-unhinged" style="font-size:0.75rem; padding:8px; background:#5c1a1a; border:2px solid transparent;">🤪 Unhinged</button>
         </div>
-        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Regenerate with delivery style:</p>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-          <button onclick="regenPitch('infomercial')" style="font-size:0.75rem; padding:8px; background:#1a5c3a;">📺 Infomercial</button>
-          <button onclick="regenPitch('siliconvalley')" style="font-size:0.75rem; padding:8px; background:#3a3a1a;">🚀 Tech Bro</button>
-          <button onclick="regenPitch('government')" style="font-size:0.75rem; padding:8px; background:#2a2a2a;">🏛️ Gov Contract</button>
+        <p style="color:#aaa; font-size:0.8rem; margin-bottom:6px;">🎭 Delivery style:</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;" id="regen-delivery-btns">
+          <button onclick="selectRegenDeliveryMode('infomercial')" id="rdbtn-infomercial" style="font-size:0.75rem; padding:8px; background:#1a5c3a; border:2px solid transparent;">📺 Infomercial</button>
+          <button onclick="selectRegenDeliveryMode('siliconvalley')" id="rdbtn-siliconvalley" style="font-size:0.75rem; padding:8px; background:#3a3a1a; border:2px solid transparent;">🚀 Tech Bro</button>
+          <button onclick="selectRegenDeliveryMode('government')" id="rdbtn-government" style="font-size:0.75rem; padding:8px; background:#2a2a2a; border:2px solid transparent;">🏛️ Gov Contract</button>
         </div>
+        <button onclick="regenFromSelections()" style="background:#533483;">🔄 Regenerate Pitch</button>
       </div>
       <p class="status" id="pitch-status"></p>
     </div>
@@ -292,10 +296,14 @@
       gameRoom = room;
       selectedIndices = [];
       lockedPitch = null;
+      selectedIdeaMode = null;
+      selectedDeliveryMode = null;
+      selectedRegenIdeaMode = null;
+      selectedRegenDeliveryMode = null;
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
       document.getElementById("buzz-inline").textContent = room.buzzWord;
       document.getElementById("mode-selector").style.display = "none";
-      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
+      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => { b.disabled = false; b.style.borderColor = 'transparent'; });
       document.getElementById("pitch-preview").style.display = "none";
       document.getElementById("pitch-hint").value = "";
       if (document.getElementById("pitch-hint-regen")) document.getElementById("pitch-hint-regen").value = "";
@@ -325,35 +333,90 @@
         ? "Choose your pitch style above!" : `Select ${2 - selectedIndices.length} more card${selectedIndices.length === 1 ? "" : "s"}`;
     }
 
+    let selectedIdeaMode = null;
+    let selectedDeliveryMode = null;
+    let selectedRegenIdeaMode = null;
+    let selectedRegenDeliveryMode = null;
+
+    const IDEA_MODES = ['literal','creative','unhinged'];
+    const DELIVERY_MODES = ['infomercial','siliconvalley','government'];
+
+    function selectIdeaMode(mode) {
+      selectedIdeaMode = selectedIdeaMode === mode ? null : mode;
+      IDEA_MODES.forEach(m => {
+        const btn = document.getElementById(`ibtn-${m}`);
+        if (btn) btn.style.borderColor = m === selectedIdeaMode ? '#ffd700' : 'transparent';
+      });
+    }
+
+    function selectDeliveryMode(mode) {
+      selectedDeliveryMode = selectedDeliveryMode === mode ? null : mode;
+      DELIVERY_MODES.forEach(m => {
+        const btn = document.getElementById(`dbtn-${m}`);
+        if (btn) btn.style.borderColor = m === selectedDeliveryMode ? '#ffd700' : 'transparent';
+      });
+    }
+
+    function selectRegenIdeaMode(mode) {
+      selectedRegenIdeaMode = selectedRegenIdeaMode === mode ? null : mode;
+      IDEA_MODES.forEach(m => {
+        const btn = document.getElementById(`ribtn-${m}`);
+        if (btn) btn.style.borderColor = m === selectedRegenIdeaMode ? '#ffd700' : 'transparent';
+      });
+    }
+
+    function selectRegenDeliveryMode(mode) {
+      selectedRegenDeliveryMode = selectedRegenDeliveryMode === mode ? null : mode;
+      DELIVERY_MODES.forEach(m => {
+        const btn = document.getElementById(`rdbtn-${m}`);
+        if (btn) btn.style.borderColor = m === selectedRegenDeliveryMode ? '#ffd700' : 'transparent';
+      });
+    }
+
+    function _resolvePitchMode(ideaMode, deliveryMode) {
+      // If both selected, combine: idea style takes precedence for content, delivery for framing
+      // For simplicity: if delivery selected, use delivery; else use idea; else random
+      if (deliveryMode) return deliveryMode;
+      if (ideaMode) return ideaMode;
+      const all = [...IDEA_MODES, ...DELIVERY_MODES];
+      return all[Math.floor(Math.random() * all.length)];
+    }
+
+    function generateFromSelections() {
+      const mode = _resolvePitchMode(selectedIdeaMode, selectedDeliveryMode);
+      const hint = document.getElementById("pitch-hint").value.trim();
+      previewPitch(mode, hint);
+    }
+
+    function regenFromSelections() {
+      const mode = _resolvePitchMode(selectedRegenIdeaMode, selectedRegenDeliveryMode);
+      const hint = document.getElementById("pitch-hint-regen").value.trim();
+      previewPitch(mode, hint);
+    }
+
     function showModeSelector() {
       document.getElementById("pitch-preview").style.display = "none";
       document.getElementById("mode-selector").style.display = "block";
       lockedPitch = null;
     }
 
-    async function previewPitch(mode) {
+    async function previewPitch(mode, hint) {
       currentPitchMode = mode;
+      if (hint === undefined) hint = document.getElementById("pitch-hint").value.trim();
       const hand = gameRoom.hands[myName] || [];
       const card1 = hand[selectedIndices[0]];
       const card2 = hand[selectedIndices[1]];
-      const hint = document.getElementById("pitch-hint").value.trim();
       await _generatePreview(card1, card2, mode, hint);
     }
 
     async function regenPitch(mode) {
-      currentPitchMode = mode;
-      const hand = gameRoom.hands[myName] || [];
-      const card1 = hand[selectedIndices[0]];
-      const card2 = hand[selectedIndices[1]];
       const hint = document.getElementById("pitch-hint-regen").value.trim();
-      await _generatePreview(card1, card2, mode, hint);
+      await previewPitch(mode, hint);
     }
 
     async function _generatePreview(card1, card2, mode, hint) {
       document.getElementById("pitch-status").textContent = "⏳ Generating...";
-      document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = true);
-      document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = true);
-
+      document.querySelectorAll("#mode-selector button, #pitch-preview button").forEach(b => b.disabled = true);
       try {
         const res = await fetch("/api/pitch-preview", {
           method: "POST",
@@ -371,17 +434,16 @@
       } catch (e) {
         document.getElementById("pitch-status").textContent = "Error generating pitch. Try again.";
       } finally {
-        document.getElementById("mode-selector").querySelectorAll("button").forEach(b => b.disabled = false);
-        document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = false);
+        document.querySelectorAll("#mode-selector button, #pitch-preview button").forEach(b => b.disabled = false);
       }
     }
 
     function lockInPitch() {
       if (!lockedPitch || selectedIndices.length !== 2) return;
-      document.getElementById("pitch-preview").querySelectorAll("button").forEach(b => b.disabled = true);
+      document.querySelectorAll("#pitch-preview button").forEach(b => b.disabled = true);
       document.getElementById("waiting-market").textContent = `⚡ ${gameRoom.buzzWord}`;
       document.getElementById("pitch-wait-status").textContent = gameRoom.vsAi
-        ? "Pitch locked in! The Algorithm is thinking..." 
+        ? "Pitch locked in! Waiting for The Algorithm..."
         : "Pitch locked in! Waiting for others...";
       show("waiting-pitches");
       socket.emit("select-cards", selectedIndices, currentPitchMode, lockedPitch);
