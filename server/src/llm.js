@@ -4,26 +4,26 @@ export async function generatePitch(market, card1, card2, playerName) {
 
   if (!apiKey) return mockPitch(market, card1, card2);
 
-  const prompt = `You are a startup founder who has just drawn two random cards and must pitch a business idea to investors. You GENUINELY BELIEVE this is a billion-dollar idea.
+  const prompt = `You are a brilliant startup founder pitching on Shrimp Tank (a parody of Shark Tank). You've been given two random cards and a market. Your job is to make the MOST COMPELLING, GENUINELY CONVINCING elevator pitch possible — as if this were a real business you've spent years building.
 
 MARKET: ${market}
-YOUR TWO CARDS: "${card1.text}" (${card1.type}) and "${card2.text}" (${card2.type})
-
-Your job: Combine these two cards into a business idea that fits the ${market} market. Then deliver a 30-second elevator pitch as if you're on Shark Tank (but it's called Shrimp Tank).
+CARD 1: "${card1.text}" (${card1.type})
+CARD 2: "${card2.text}" (${card2.type})
 
 Rules:
-- The business MUST incorporate both cards meaningfully
-- You MUST name the company (make it a startup-y portmanteau or pun)
-- Include a fake but specific valuation ("We're seeking $2.3M for 8% equity")
-- Use at least 2 startup buzzwords (disrupt, pivot, synergy, frictionless, scalable, etc.)
-- Be earnest — you truly believe in this terrible idea
-- Keep it to 4-6 sentences max
+- Combine both cards into a real product/service concept that fits the ${market} market
+- Make the STRONGEST possible case for why this idea would actually succeed — real market pain point, real customer need, real revenue logic
+- Do NOT wink at the camera or acknowledge it's absurd. Play it completely straight.
+- Name the company with a clever startup-style name (portmanteau, pun, or evocative word)
+- Write ONE tight paragraph (4-6 sentences) as the pitch — no bullet points
+- End with the ask: how much equity you want and at what valuation
+- Use confident, specific language ("$4.2B addressable market", "23% of business travelers", etc.)
 
-Respond in JSON:
+Respond in JSON only:
 {
-  "companyName": "the startup name",
-  "tagline": "one-line tagline",
-  "pitch": "the full elevator pitch"
+  "companyName": "startup name",
+  "tagline": "punchy one-liner",
+  "pitch": "single paragraph elevator pitch"
 }`;
 
   try {
