@@ -66,6 +66,7 @@ io.on("connection", (socket) => {
   // Host deals a new round
   socket.on("deal-round", () => {
     const room = getRoom(currentRoom);
+    console.log(`deal-round: player=${playerName} room=${currentRoom} host=${room?.host} state=${room?.state}`);
     if (!room || playerName !== room.host) return;
     const updated = dealRound(currentRoom);
     if (!updated) return;
