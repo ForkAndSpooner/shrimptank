@@ -1,83 +1,52 @@
-// Idea generation modes (what the product IS)
-const IDEA_PROMPTS = {
-  literal: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank. Complete conviction, zero irony.
+// Pitch modes — idea style determines the product, all delivered infomercial-style
+const PITCH_PROMPTS = {
+  literal: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. Breathless energy, fake urgency, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-LITERAL: Both cards in their most literal real-world sense. A stapler drives metal staples through paper. "${buzzWord}" taken literally. The product IS this exact combination.
+LITERAL: Both cards in their most literal real-world sense. A stapler drives metal staples through paper. "${buzzWord}" taken literally. The product IS this exact combination — pitched like it solves humanity's greatest crisis.
 
-2-3 sentences: name + what it literally is, problem it solves, market size + ask. Never acknowledge it's unusual. One paragraph.
+Include one fake testimonial. End with "But WAIT — there's more!" and a ridiculous price. Never acknowledge it's unusual.
 
-JSON only: {"companyName":"...","tagline":"literal description 6 words max","pitch":"..."}`,
+2-3 sentences. One paragraph.
 
-  creative: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank. Complete conviction, zero irony.
+JSON only: {"companyName":"...","tagline":"literal infomercial hook 6 words max","pitch":"..."}`,
 
-CARD 1: "${card1.text}" (${card1.type})
-CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
-${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
-
-CREATIVE: Interpret the cards to make the most compelling product possible. "${buzzWord}" is the core technology. You decide the customer.
-
-2-3 sentences: name + product, problem + why this is the only solution, market size + ask. Never acknowledge it's unusual. One paragraph.
-
-JSON only: {"companyName":"...","tagline":"product description 6 words max","pitch":"..."}`,
-
-  unhinged: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank. Complete conviction, zero irony. You have no regard for safety or human wellbeing.
+  creative: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. Breathless energy, fake urgency, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-UNHINGED: Create the most dangerous, reckless, or legally questionable business possible using these cards literally. Think extreme physical risk, massive liability, regulatory nightmares, or products that could cause genuine harm at scale. "${buzzWord}" amplifies the danger. Pitch it with complete earnestness — you genuinely believe this is a great idea.
+CREATIVE: Interpret the cards to make the most compelling product possible. "${buzzWord}" is the core technology. You decide the customer — then pitch it like it's the most important invention since sliced bread.
 
-2-3 sentences: name + what it dangerously is, why people obviously need this despite the obvious risks, market size + ask. Straight-faced. One paragraph.
+Include one fake testimonial. End with "But WAIT — there's more!" and a ridiculous price. Never acknowledge it's unusual.
 
-JSON only: {"companyName":"...","tagline":"dangerously literal description 6 words max","pitch":"..."}`,
-};
-
-// Delivery style modes (HOW it's pitched)
-const DELIVERY_PROMPTS = {
-  infomercial: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank like a 3am infomercial host. Breathless energy, fake urgency, testimonials, price ending in .99.
-
-CARD 1: "${card1.text}" (${card1.type})
-CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
-${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
-
-Combine the cards into a product nobody needs, pitched like it solves humanity's greatest crisis. One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price. "${buzzWord}" explains everything.
-
-2-3 sentences, infomercial style. One paragraph.
+2-3 sentences. One paragraph.
 
 JSON only: {"companyName":"...","tagline":"infomercial hook 6 words max","pitch":"..."}`,
 
-  siliconvalley: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank. Stanford dropout. $40M raised, zero users. "Disrupt" is your favorite word.
+  unhinged: (card1, card2, buzzWord, hint) => `You are a 3am infomercial host pitching on Shrimp Tank. You have no regard for safety or human wellbeing. Breathless energy, complete conviction.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 ${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
 
-Disrupt something that doesn't need disrupting. "${buzzWord}" is your entire moat. $2B valuation, no revenue model. Name-drop YC, a16z, or Sequoia. Describe the product in maximum jargon while technically referencing both cards.
+UNHINGED: The most dangerous, reckless, or legally questionable product using these cards literally. "${buzzWord}" amplifies the danger. Pitch it like it's obviously a great idea despite the obvious risks.
+
+Include one fake testimonial from someone who survived using it. End with "But WAIT — there's more!" and a price that doesn't reflect the liability. Completely straight-faced.
 
 2-3 sentences. One paragraph.
 
-JSON only: {"companyName":"...","tagline":"jargon-filled non-description 6 words max","pitch":"..."}`,
+JSON only: {"companyName":"...","tagline":"alarming infomercial hook 6 words max","pitch":"..."}`,
+};
 
-  government: (card1, card2, buzzWord, hint) => `You are pitching on Shrimp Tank to a federal procurement committee. You are a defense contractor.
-
-CARD 1: "${card1.text}" (${card1.type})
-CARD 2: "${card2.text}" (${card2.type})
-BUZZ WORD: "${buzzWord}"
-${hint ? `FOUNDER'S NOTE: "${hint}"` : ""}
-
-Product for a federal agency. 400x the reasonable cost, 7 years to deliver, 3 committees to approve, 4,000-page spec. "${buzzWord}" adds $50M to the budget. Maximum bureaucratic jargon. Reference "national security."
-
-2-3 sentences. One paragraph.
+const ALL_PROMPTS = PITCH_PROMPTS;
 
 JSON only: {"companyName":"...","tagline":"bureaucratic description 6 words max","pitch":"..."}`,
 };
@@ -145,7 +114,7 @@ export async function generateAiOpponentPitch(market, hand, buzzWord) {
   const card1 = selectResult ? (hand[selectResult.indices?.[0]] || hand[0]) : hand[0];
   const card2 = selectResult ? (hand[selectResult.indices?.[1]] || hand[1]) : hand[1];
 
-  const aiModes = ["literal", "literal", "unhinged", "infomercial", "government", "siliconvalley"];
+  const aiModes = ["literal", "literal", "unhinged", "creative"];
   const aiMode = aiModes[Math.floor(Math.random() * aiModes.length)];
 
   const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord, aiMode);
