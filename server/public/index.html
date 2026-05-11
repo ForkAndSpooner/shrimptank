@@ -73,7 +73,8 @@
   <div id="home" class="screen active">
     <div class="card">
       <input id="player-name" placeholder="Your display name" maxlength="20">
-      <button onclick="createGame()">Start New Game</button>
+      <button onclick="createGame(false)">Start New Game</button>
+      <button class="btn-secondary" onclick="createGame(true)">🤖 Play vs The Algorithm</button>
       <hr class="divider">
       <input id="join-code" placeholder="Enter room code" maxlength="4" style="text-transform:uppercase; text-align:center; font-size:1.5rem; letter-spacing:0.2em;">
       <button class="btn-secondary" onclick="joinGame()">Join Game</button>
@@ -197,11 +198,11 @@
     }
 
     // HOME
-    function createGame() {
+    function createGame(vsAi = false) {
       myName = document.getElementById("player-name").value.trim();
       if (!myName) return alert("Enter your name!");
       isHost = true;
-      socket.emit("create-room", myName, ({ code, room }) => {
+      socket.emit("create-room", myName, vsAi, ({ code, room }) => {
         roomCode = code; gameRoom = room;
         renderLobby(room); show("lobby");
       });
@@ -226,6 +227,8 @@
         .map(p => `<span class="player-tag">${p.name === room.host ? "👑 " : ""}${esc(p.name)}</span>`).join("");
       document.getElementById("host-voting-mode").style.display = isHost ? "block" : "none";
       document.getElementById("guest-lobby-wait").style.display = isHost ? "none" : "block";
+      // Hide room code sharing UI when playing solo vs AI
+      document.getElementById("display-code").parentElement.style.display = room.vsAi ? "none" : "block";
     }
 
     function setMode(mode) { socket.emit("set-voting-mode", mode); }
