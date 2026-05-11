@@ -551,7 +551,14 @@
         ? `<div class="winner-banner">🏆 ${esc(room.winner)} is FUNDED!</div>` : "";
 
       document.getElementById("shrimp-verdict-display").innerHTML = room.shrimpVote
-        ? `<div class="shrimp-verdict"><div class="label">🦐 The Shrimp says:</div><div class="text">${esc(room.shrimpVote.reasoning)}</div></div>` : "";
+        ? `<div class="shrimp-verdict">
+            <div class="label">🦐 The Shrimp says:</div>
+            <div class="text">${esc(room.shrimpVote.reasoning)}</div>
+            ${room.shrimpVote.buzzBonus ? `<div class="mt-3 pt-3 border-t border-warning/30">
+              <div class="label">⚡ Buzz Card Bonus → ${esc(room.shrimpVote.buzzBonus)}</div>
+              <div class="text">${esc(room.shrimpVote.buzzBonusReason || "")}</div>
+            </div>` : ""}
+          </div>` : "";
 
       document.getElementById("results-pitches").innerHTML = Object.entries(room.pitches).map(([pn, p]) => {
         const cards = room.selections[pn] || [];
@@ -567,7 +574,11 @@
       }).join("");
 
       document.getElementById("scoreboard").innerHTML = room.players
-        .map(p => `<div class="score-tag">${esc(p.name)} <span class="wins">${room.scores[p.name] || 0} 🏆</span></div>`).join("");
+        .map(p => {
+          const wins = room.scores[p.name] || 0;
+          const buzz = room.buzzBonusScores?.[p.name] || 0;
+          return `<div class="score-tag">${esc(p.name)} <span class="wins">${wins} 🏆</span>${buzz > 0 ? ` <span style="color:#fbbf24; font-size:0.8rem;">+${buzz} ⚡</span>` : ""}</div>`;
+        }).join("");
 
       document.getElementById("host-results-controls").style.display = isHost ? "block" : "none";
       show("results");
