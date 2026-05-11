@@ -122,7 +122,7 @@ export async function generateAiOpponentPitch(market, hand, _buzzWord) {
   const aiModes = ["literal", "literal", "unhinged", "creative"];
   const aiMode = aiModes[Math.floor(Math.random() * aiModes.length)];
 
-  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord, aiMode);
+  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", null, aiMode);
   return { pitch, selections: [card1, card2], pitchMode: aiMode };
 }
 
