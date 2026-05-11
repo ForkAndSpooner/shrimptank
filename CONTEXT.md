@@ -1,171 +1,113 @@
 # Shrimp Tank — Project Context
 
-## What It Is
-A multiplayer party game (like Jackbox.tv) where players pitch absurd business ideas using randomly dealt cards, delivered in infomercial style. An AI judge evaluates the pitches and awards a winner plus a Buzz Card Bonus.
+## What it is
+Multiplayer party game (Cards Against Humanity + Jackbox style). Players pitch absurd business ideas using random cards; a "Shrimp Tank" judge (AI or players) picks a winner.
 
 **Live URL:** https://shrimptank-production.up.railway.app  
-**GitHub:** https://github.com/ForkAndSpooner/shrimptank  
-**Railway Project ID:** ce9520b8-d749-4bd7-ad64-135f86ff976b  
-**Railway Service ID (shrimptank):** 4d7461f9-654f-43d0-a9f4-c1e99f970edf  
-**Railway Environment ID:** bba6e1c0-8fc6-4aa6-9979-ea3930131f0c  
+**Repo:** ForkAndSpooner/shrimptank  
+**Deploy:** Railway auto-deploys from GitHub main branch. If it doesn't trigger, use Railway API: `serviceInstanceRedeploy` mutation.
 
 ---
 
-## Tech Stack
-- **Backend:** Node.js (ESM), Express, Socket.io, better-sqlite3
-- **Frontend:** Single HTML file with DaisyUI (night theme) + Tailwind CDN + Bebas Neue font
+## Stack
+- **Server:** Node.js + Express + Socket.io (ESM modules), `server/src/`
+- **Client:** Single-file SPA, `server/public/index.html` (DaisyUI + Tailwind CDN + vanilla JS)
 - **AI:** Anthropic API — Haiku for pitch generation, Sonnet for judging
-- **Hosting:** Railway (auto-deploys from GitHub main branch)
-- **No build step** — pure Node.js, Dockerfile builds and runs directly
+- **State:** In-memory only (no database), rooms Map in `game.js`
 
 ---
 
-## How the Game Works
-
-### Setup (Host)
-1. Host goes to the URL, enters name, optionally checks **Shared Hand** (default on)
-2. Host clicks **Start New Game** or **Play vs The Algorithm**
-3. Host gets a 4-letter room code to share with friends
-4. Host picks a **judging mode** (see below)
-5. Host clicks **Deal Cards**
-
-### Each Round
-1. A **Buzz Card** is revealed — a tech/culture buzzword (e.g. "Blockchain-based", "Gamified")
-   - Definition shown inline; using it earns a **⚡ Buzz Card Bonus point** (optional)
-2. Each player sees their **7-card hand** (3 objects + 2 services + 2 actions)
-3. Player picks **2 cards** → mode selector appears
-4. Player optionally types a **hint** to guide the pitch
-5. Player selects an **idea style** (optional) and clicks **⚡ Generate Pitch**
-6. Player sees the generated pitch, can **regenerate** with same or different style, or **Lock In**
-7. Locking in submits the pitch; in vs-AI mode, judging fires automatically
-
-### Judging
-- **Player Vote:** Everyone votes (can't vote for yourself)
-- **Friends & Family:** AI picks the funniest/most appealing
-- **Venture Capital:** AI scores on customer problem + feasibility + revenue potential (1-10 each)
-- **Super Briney:** Impossibly salty AI panel roasts everyone, grudgingly picks one
-
-### Results
-- Winner announced + judge's reasoning shown
-- **⚡ Buzz Card Bonus** awarded separately if someone integrated the buzz word meaningfully
-- Scoreboard tracks wins (🏆) and buzz bonuses (⚡) separately
-- Host can start next round or end game
+## Key files
+| File | Purpose |
+|------|---------|
+| `server/src/game.js` | Room state machine — createRoom, dealRound, selectCards, setPitch, etc. |
+| `server/src/index.js` | Socket.io event handlers + Express routes |
+| `server/src/llm.js` | Anthropic API calls — generatePitch, generateShrimpVerdict, generateAiOpponentPitch |
+| `server/src/data/cards.js` | Card decks (objects, actions, services, buzzWords) |
+| `server/public/index.html` | Entire frontend |
 
 ---
 
-## Card System
+## Game flow
+1. **Lobby** → host sets judging mode (default: Super Briney), starts game
+2. **Dealing** → server draws 7 cards per player + hidden buzz word
+3. **Pitching** → players pick 2 cards, pitch auto-generates via `/api/pitch-preview`, lock in
+4. **Voting** → buzz word revealed; Shrimp/VC/Friends judge picks winner (75% pitch quality, 25% buzz fit)
+5. **Results** → scores updated, next round or end
 
-### Hand Composition (always 7 cards)
-- 3 **Object** cards — physical things (rubber duck, trampoline, disco ball, etc.)
-- 2 **Service** cards — things you do for people (exorcism, bounty hunting, revenge, etc.)
-- 2 **Action** cards — modifiers (heated, inflatable, voice-activated, weaponized, etc.)
-
-**Shared Hand mode (default):** All players get the same 7 cards — more competitive  
-**Private Hand mode:** Each player gets their own random 7 cards
-
-### Buzz Cards (28 total)
-Each has a word + plain-English definition shown to players. Examples:
-- "B-Corp certified" — Legally certified to meet high standards of social and environmental performance
-- "Blockchain-based" — Built on a decentralized, tamper-proof digital ledger
-- "Gamified" — Uses game mechanics (points, levels, rewards) to drive engagement
+**Solo mode:** Human vs "🤖 The Algorithm" (AI player). Skips lobby entirely.
 
 ---
 
-## Pitch Modes (Idea Style)
-
-All pitches are delivered **infomercial-style** (breathless energy, fake testimonial, "But WAIT — there's more!", ridiculous price). The mode determines what the product IS:
-
-| Mode | What it does |
-|------|-------------|
-| 🔩 **Literal** | Product IS the exact literal combination of both cards. A stapler + hula hoop = a device that staples paper while spinning around your waist. No reinterpretation. |
-| ✨ **Creative** | Invents a new product category inspired by the cards. May reinterpret metaphorically. |
-| 🤪 **Unhinged** | Most dangerous/reckless product using the cards literally. Testimonial from a survivor. |
-
-**Important:** Prompts say "pitching a business idea" — NOT "Shrimp Tank" or any game name, because Claude was pattern-matching on "shrimp" and making everything about shrimp.
+## Buzz word mechanic
+- Each round has a hidden buzz word (drawn from `buzzWords` in cards.js)
+- Players pitch WITHOUT knowing it
+- Revealed at judging time
+- Judge weights: 75% business idea quality, 25% how well pitch fits the buzz word
+- Hidden during pitching via `publicRoom()` helper which strips buzzWord from broadcasts
 
 ---
 
-## AI Configuration
+## Judging modes
+| Mode | Behavior |
+|------|---------|
+| `super-briney` | Salty shrimp investors roast pitches |
+| `venture-capital` | Serious VC scores customer problem / feasibility / revenue |
+| `friends-family` | Easily impressed friend, picks what made them laugh |
+| `players` | Human players vote (can't vote for self) |
 
-**Models:**
-- Pitch generation: `claude-haiku-4-5-20251001` (fast, cheap)
-- Judging/verdicts: `claude-sonnet-4-5-20250929` (better quality)
-- AI card selection: `claude-haiku-4-5-20251001` (50 tokens)
+---
 
-**API Key:** Set as `ANTHROPIC_API_KEY` environment variable in Railway
+## Known bugs / active work (as of 2026-05-11)
 
-**Pitch prompt structure:**
-```
-You are a 3am infomercial host pitching a business idea. Breathless energy, fake urgency.
-CARD 1: [card] (type)
-CARD 2: [card] (type)  
-BUZZ WORD: [buzzword]
-[FOUNDER'S NOTE: hint if provided]
-[MODE INSTRUCTIONS]
-One fake testimonial. End with "But WAIT — there's more!" and a ridiculous price.
-STRICT LIMIT: 2 sentences MAX. Under 75 words total.
-JSON only: {"companyName":"...","tagline":"...","pitch":"..."}
+### Solo play hang — PARTIALLY FIXED, needs verification
+**Symptom:** Player locks in pitch in solo mode, game hangs on "Pitch locked in! Waiting for The Algorithm..." and never transitions to voting.
+
+**Root causes found and fixed:**
+1. `generateAiOpponentPitch` in `llm.js` referenced `buzzWord` (undefined variable — should be `null`) — always threw ReferenceError, AI pitch never stored. **[FIXED: pass `null`]**
+2. `soloGoToVoting` helper had no error handling — unhandled exception crashed the Node.js server, Railway returned 502 Bad Gateway. **[FIXED: wrapped in try/catch]**
+3. `selectCards` returns null if `room.state !== "pitching"` — if AI pitch was stored fast enough to transition state before human locked in, the human's lock-in was silently dropped. **[FIXED: handler now stores pitch + calls soloGoToVoting even when selectCards returns null]**
+4. `getRoom(null)` would crash with TypeError — **[FIXED: null guard added]**
+
+**How `soloGoToVoting` works:** Idempotent helper. Called from BOTH the AI pitch callback (deal-round handler) AND the human's select-cards handler. Fires `pitches-ready` once both pitches exist. Uses `buzzWordRevealed` as "already fired" guard to prevent double-emit.
+
+**If still broken after these fixes:** Check Railway logs. The 502 observed in testing was likely a server crash due to unhandled exception — should be resolved by the try/catch fix.
+
+---
+
+## Recent changes (session 2026-05-11)
+- Default pitch style changed from Creative → **Literal**
+- `llm.js`: Fixed `buzzWord` → `null` in `generateAiOpponentPitch`
+- `index.js`: Replaced polling `waitForAi` interval with idempotent `soloGoToVoting()` function
+- `index.js`: `soloGoToVoting` wrapped in try/catch to prevent server crash
+- `index.js`: `selectCards` null return now handled gracefully (pitch still stored, soloGoToVoting still called)
+- `game.js`: `getRoom()` now guards against null input
+
+---
+
+## Deploy workflow
+The GitHub webhook from Railway doesn't always fire on API commits. After pushing to GitHub, trigger a redeploy manually via Railway GraphQL API:
+
+**Endpoint:** `https://backboard.railway.com/graphql/v2`  
+**Auth:** `Authorization: Bearer <RAILWAY_TOKEN>`
+
+```graphql
+mutation {
+  serviceInstanceRedeploy(
+    environmentId: "bba6e1c0-8fc6-4aa6-9979-ea3930131f0c"
+    serviceId: "4d7461f9-654f-43d0-a9f4-c1e99f970edf"
+  )
+}
 ```
 
-**Verdict prompt** asks judge to pick a winner AND separately award the Buzz Card Bonus to whoever best integrated the buzz word (can be null if nobody did).
-
----
-
-## vs AI Mode
-- AI opponent is called "🤖 The Algorithm"
-- AI generates its pitch **at deal time** (background), so by the time the human locks in, the AI pitch is ready
-- Locking in automatically triggers judging — no extra button press
-- AI randomly picks from: literal, literal, unhinged, creative (weighted toward literal/unhinged for comedy)
-
----
-
-## File Structure
+Check deployment status:
+```graphql
+query {
+  deployments(first: 1, input: {
+    serviceId: "4d7461f9-654f-43d0-a9f4-c1e99f970edf"
+    environmentId: "bba6e1c0-8fc6-4aa6-9979-ea3930131f0c"
+  }) {
+    edges { node { id status createdAt } }
+  }
+}
 ```
-shrimptank/
-├── Dockerfile
-├── CONTEXT.md (this file)
-└── server/
-    ├── package.json
-    ├── public/
-    │   └── index.html          # Entire frontend (DaisyUI + vanilla JS)
-    └── src/
-        ├── index.js            # Express + Socket.io server, all game event handlers
-        ├── game.js             # In-memory room/game state management
-        ├── llm.js              # All Claude API calls (pitches, verdicts, AI opponent)
-        └── data/
-            └── cards.js        # All card decks (objects, actions, services, buzzWords)
-```
-
----
-
-## Deployment
-Railway auto-deploys when `main` branch on GitHub is updated. The Dockerfile builds the Node.js app and runs `node src/index.js`.
-
-**To deploy a change:**
-1. Edit files in the repo
-2. Commit and push to `main`
-3. Railway detects the push and rebuilds automatically (~60 seconds)
-
-**Environment variables set in Railway:**
-- `ANTHROPIC_API_KEY` — Anthropic API key
-- `PORT` — 3001
-
----
-
-## Known Issues / Design Decisions
-- Room state is **in-memory only** — restarting the server kills all active games
-- No user accounts or persistent history (planned for future)
-- The game name "Shrimp Tank" does NOT appear in any AI prompts (causes shrimp-themed contamination)
-- Buzz Card is **optional** — players get a bonus point for using it well, but can ignore it
-- Super Briney judging mode tends to produce the funniest results
-- Unhinged pitch mode tends to win most often (by design — it's the funniest)
-
----
-
-## Related Game: Drinktionary
-Also built in this project, deployed separately:
-- **URL:** https://web-production-7264f.up.railway.app
-- **GitHub:** https://github.com/ForkAndSpooner/drinktionary
-- **Railway Service ID:** 4c21c610-c0c5-42f2-8e18-346dfb6937c1
-- Players write fake Urban Dictionary definitions for real cocktail names
-- Claude generates custom achievement awards (Cards Against Humanity / Dungeon Crawler Carl style)
