@@ -327,7 +327,32 @@
 
     function requestShrimpVerdict() {
       document.getElementById("host-shrimp-btn-wrap").style.display = "none";
-      document.getElementById("shrimp-thinking-msg").style.display = "block";
+      const msg = document.getElementById("shrimp-thinking-msg");
+      msg.style.display = "block";
+
+      // Animated messages so it doesn't feel stuck
+      const lines = [
+        "🦐 The Shrimp is deliberating...",
+        "🦐 Reviewing the financials...",
+        "🦐 Consulting their offshore accounts...",
+        "🦐 Almost there...",
+      ];
+      let i = 0;
+      msg.querySelector("p").textContent = lines[0];
+      const interval = setInterval(() => {
+        i = Math.min(i + 1, lines.length - 1);
+        msg.querySelector("p").textContent = lines[i];
+      }, 4000);
+
+      // Timeout fallback after 20s
+      const timeout = setTimeout(() => {
+        clearInterval(interval);
+        msg.querySelector("p").textContent = "⚠️ The Shrimp is unavailable. Try again.";
+        document.getElementById("host-shrimp-btn-wrap").style.display = "block";
+        msg.style.display = "none";
+      }, 20000);
+
+      socket.once("results", () => { clearInterval(interval); clearTimeout(timeout); });
       socket.emit("request-shrimp-verdict");
     }
 
