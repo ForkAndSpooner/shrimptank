@@ -1,31 +1,54 @@
-export async function generatePitch(market, card1, card2, playerName, buzzWord = null) {
+export async function generatePitch(market, card1, card2, playerName, buzzWord = null, pitchMode = "literal") {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return mockPitch(card1, card2, buzzWord);
 
-  const prompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
+  const literalPrompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
 
 CARD 1: "${card1.text}" (${card1.type})
 CARD 2: "${card2.text}" (${card2.type})
 BUZZ WORD: "${buzzWord}"
 
-Your product literally combines both cards, and "${buzzWord}" is the core technology or angle that makes it work. You decide who the customer is — pick whoever makes the most logical (or delightfully absurd) sense given the combination.
+CRITICAL RULE — LITERAL MODE: Both cards must be used in their most literal, real-world sense. Do NOT reinterpret, metaphorize, or abstract them. A stapler is a device that drives metal staples through paper. A hula hoop is a plastic ring you spin around your waist. "${buzzWord}" must also be taken literally.
+
+The product is the absurd but earnest result of combining these exact things. You decide who the customer is — whoever most logically (or hilariously) needs this exact combination.
 
 Write 2-3 sentences:
-- Sentence 1: Name the company, state exactly what the product is, and who it's for
-- Sentence 2: The obvious problem it solves and why "${buzzWord}" is the only logical solution
-- Sentence 3: One confident market size claim + your ask (dollar amount + equity %)
+- Sentence 1: Name the company and describe exactly what the product literally is
+- Sentence 2: The obvious problem it solves and why the literal combination is the only answer
+- Sentence 3: Market size claim + ask (dollar amount + equity %)
 
-Rules:
-- Never acknowledge the idea is unusual. This is completely normal.
-- The tagline should literally describe what the product is in 6 words or fewer.
-- No bullet points. One tight paragraph.
+Never acknowledge it's unusual. One tight paragraph. No bullet points.
 
 Respond in JSON only:
 {
   "companyName": "clever startup name",
-  "tagline": "literal product description, 6 words max",
+  "tagline": "literal description of what this actually is, 6 words max",
   "pitch": "2-3 sentence paragraph"
 }`;
+
+  const creativePrompt = `You are pitching on Shrimp Tank. Deliver with complete conviction, zero irony. You are the straight man.
+
+CARD 1: "${card1.text}" (${card1.type})
+CARD 2: "${card2.text}" (${card2.type})
+BUZZ WORD: "${buzzWord}"
+
+Build the most compelling product you can by combining these cards and "${buzzWord}". You may interpret the cards creatively to make the best possible business. You decide who the customer is.
+
+Write 2-3 sentences:
+- Sentence 1: Name the company and state what the product is
+- Sentence 2: The problem it solves and why "${buzzWord}" makes it the only logical answer
+- Sentence 3: Market size claim + ask (dollar amount + equity %)
+
+Never acknowledge it's unusual. One tight paragraph. No bullet points.
+
+Respond in JSON only:
+{
+  "companyName": "clever startup name",
+  "tagline": "product description, 6 words max",
+  "pitch": "2-3 sentence paragraph"
+}`;
+
+  const prompt = pitchMode === "literal" ? literalPrompt : creativePrompt;
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -86,7 +109,7 @@ Pick ONE winner. Respond in JSON only:
   return mockVerdict(pitches);
 }
 
-export async function generateAiOpponentPitch(market, hand, buzzWord = null) {
+export async function generateAiOpponentPitch(market, hand, buzzWord = null, pitchMode = "literal") {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const handDesc = hand.map((c, i) => `${i}: "${c.text}" (${c.type})`).join(", ");
 
@@ -111,7 +134,7 @@ export async function generateAiOpponentPitch(market, hand, buzzWord = null) {
     } catch (e) { /* use fallback */ }
   }
 
-  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord);
+  const pitch = await generatePitch(market, card1, card2, "🤖 The Algorithm", buzzWord, pitchMode);
   return { pitch, selections: [card1, card2] };
 }
 
