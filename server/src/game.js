@@ -21,14 +21,14 @@ function shuffle(arr) {
 
 function drawCards(n) {
   const objDeck = shuffle(objects.map(c => ({ text: c, type: "object" })));
-  const otherDeck = shuffle([
-    ...actions.map(c => ({ text: c, type: "action" })),
-    ...services.map(c => ({ text: c, type: "service" })),
+  const actDeck = shuffle(actions.map(c => ({ text: c, type: "action" })));
+  const svcDeck = shuffle(services.map(c => ({ text: c, type: "service" })));
+  // Always: 3 objects, 2 services, 2 actions
+  return shuffle([
+    ...objDeck.slice(0, 3),
+    ...svcDeck.slice(0, 2),
+    ...actDeck.slice(0, 2),
   ]);
-  // Guarantee at least 3 object cards
-  const guaranteed = objDeck.slice(0, 3);
-  const rest = shuffle([...objDeck.slice(3), ...otherDeck]).slice(0, n - 3);
-  return shuffle([...guaranteed, ...rest]);
 }
 
 export const AI_PLAYER = "🤖 The Algorithm";
