@@ -24,10 +24,10 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  socket.on("create-room", (name, vsAi, cb) => {
-    // support old signature create-room(name, cb)
-    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; }
-    const room = createRoom(name, vsAi);
+  socket.on("create-room", (name, vsAi, buzzMode, cb) => {
+    if (typeof vsAi === "function") { cb = vsAi; vsAi = false; buzzMode = false; }
+    else if (typeof buzzMode === "function") { cb = buzzMode; buzzMode = false; }
+    const room = createRoom(name, vsAi, buzzMode);
     currentRoom = room.code;
     playerName = name;
     socket.join(room.code);
@@ -78,7 +78,7 @@ io.on("connection", (socket) => {
 
       const pitchPromises = updated.players.map(async p => {
         if (p.isAi) {
-          const { pitch, selections } = await generateAiOpponentPitch(updated.market, updated.hands[p.name]);
+          const { pitch, selections } = await generateAiOpponentPitch(updated.market, updated.hands[p.name], updated.buzzWord);
           // Store AI selections
           selectCards(currentRoom, p.name, [
             updated.hands[p.name].indexOf(selections[0]),
@@ -87,7 +87,7 @@ io.on("connection", (socket) => {
           return { playerName: p.name, pitch };
         }
         const [c1, c2] = updated.selections[p.name];
-        const pitch = await generatePitch(updated.market, c1, c2, p.name);
+        const pitch = await generatePitch(updated.market, c1, c2, p.name, updated.buzzWord);
         return { playerName: p.name, pitch };
       });
 
