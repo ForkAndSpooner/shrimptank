@@ -20,17 +20,20 @@ function shuffle(arr) {
 }
 
 function drawCards(n) {
-  const deck = shuffle([
-    ...objects.map(c => ({ text: c, type: "object" })),
+  const objDeck = shuffle(objects.map(c => ({ text: c, type: "object" })));
+  const otherDeck = shuffle([
     ...actions.map(c => ({ text: c, type: "action" })),
     ...services.map(c => ({ text: c, type: "service" })),
   ]);
-  return deck.slice(0, n);
+  // Guarantee at least 3 object cards
+  const guaranteed = objDeck.slice(0, 3);
+  const rest = shuffle([...objDeck.slice(3), ...otherDeck]).slice(0, n - 3);
+  return shuffle([...guaranteed, ...rest]);
 }
 
 export const AI_PLAYER = "🤖 The Algorithm";
 
-export function createRoom(hostName, vsAi = false, buzzMode = false, pitchMode = "literal") {
+export function createRoom(hostName, vsAi = false) {
   const code = generateRoomCode();
   const players = [{ name: hostName }];
   if (vsAi) players.push({ name: AI_PLAYER, isAi: true });
@@ -41,8 +44,6 @@ export function createRoom(hostName, vsAi = false, buzzMode = false, pitchMode =
     host: hostName,
     players,
     vsAi,
-    buzzMode,
-    pitchMode, // "literal" | "creative"
     votingMode: null,
     market: null,
     buzzWord: null,
@@ -92,18 +93,20 @@ export function dealRound(code) {
   room.votes = {};
   room.shrimpVote = null;
   for (const p of room.players) {
-    room.hands[p.name] = drawCards(5);
+    room.hands[p.name] = drawCards(7);
   }
   room.state = "pitching";
   return room;
 }
 
-export function selectCards(code, playerName, cardIndices) {
+export function selectCards(code, playerName, cardIndices, pitchMode = "literal") {
   const room = rooms.get(code.toUpperCase());
   if (!room || room.state !== "pitching") return null;
   const hand = room.hands[playerName];
   if (!hand) return null;
   room.selections[playerName] = cardIndices.map(i => hand[i]);
+  room.pitchModes = room.pitchModes || {};
+  room.pitchModes[playerName] = pitchMode;
   return room;
 }
 
