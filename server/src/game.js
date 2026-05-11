@@ -72,6 +72,7 @@ export function joinRoom(code, playerName) {
 }
 
 export function getRoom(code) {
+  if (!code) return null;
   return rooms.get(code.toUpperCase());
 }
 
