@@ -113,16 +113,25 @@ io.on("connection", (socket) => {
   });
 
   // Host requests shrimp verdict
-  socket.on("request-shrimp-verdict", () => {
+  socket.on("request-shrimp-verdict", async () => {
     const room = getRoom(currentRoom);
     if (!room || playerName !== room.host) return;
-    if (!["serious-shrimp", "silly-shrimp", "mean-shrimp"].includes(room.votingMode)) return;
+    if (!["friends-family", "venture-capital", "evil-tech-bro"].includes(room.votingMode)) return;
     io.to(currentRoom).emit("shrimp-thinking");
-    generateShrimpVerdict(room.market, room.pitches, room.votingMode).then(verdict => {
+    try {
+      const verdict = await generateShrimpVerdict(room.market, room.pitches, room.votingMode);
       setShrimpVote(currentRoom, verdict.votedFor, verdict.reasoning);
       const final = tallyAndFinish(currentRoom);
       io.to(currentRoom).emit("results", final);
-    });
+    } catch (e) {
+      console.error("Verdict handler error:", e.message);
+      // Fall back to random pick
+      const players = Object.keys(room.pitches);
+      const fallback = players[Math.floor(Math.random() * players.length)];
+      setShrimpVote(currentRoom, fallback, "The Shrimp had technical difficulties. Picking at random.");
+      const final = tallyAndFinish(currentRoom);
+      io.to(currentRoom).emit("results", final);
+    }
   });
 
   socket.on("next-round", () => {
