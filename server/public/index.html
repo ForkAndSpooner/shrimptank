@@ -168,7 +168,8 @@
         <div class="tooltip tooltip-bottom w-full" id="buzz-tooltip" data-tip="">
           <div class="buzz-badge" id="market-display"></div>
         </div>
-        <p class="text-base-content/40 text-center text-xs">Pick 2 cards — your product must use <strong id="buzz-inline" class="text-warning"></strong>:<span id="shared-hand-label" style="display:none;" class="ml-2 badge badge-outline badge-xs">Shared Hand</span></p>
+        <p id="buzz-def-inline" class="text-base-content/30 text-center text-xs italic mb-1"></p>
+        <p class="text-base-content/40 text-center text-xs">Pick 2 cards. Use the Buzz Card for a <span class="text-warning font-semibold">⚡ Bonus Point</span> — or ignore it.<span id="shared-hand-label" style="display:none;" class="ml-2 badge badge-outline badge-xs">Shared Hand</span></p>
         <div class="hand" id="hand-display"></div>
 
         <div id="mode-selector" style="display:none;" class="flex flex-col gap-3 mt-2">
@@ -341,9 +342,11 @@
       selectedIdeaMode = null;
       selectedRegenIdeaMode = null;
       document.getElementById("market-display").textContent = `⚡ ${room.buzzWord}`;
-      document.getElementById("buzz-inline").textContent = room.buzzWord;
+      document.getElementById("buzz-inline") && (document.getElementById("buzz-inline").textContent = room.buzzWord);
       const buzzTip = document.getElementById("buzz-tooltip");
       if (buzzTip) buzzTip.setAttribute("data-tip", room.buzzWordDef || "");
+      const buzzDef = document.getElementById("buzz-def-inline");
+      if (buzzDef) buzzDef.textContent = room.buzzWordDef || "";
       const sharedLabel = document.getElementById("shared-hand-label");
       if (sharedLabel) sharedLabel.style.display = room.sharedHand ? "inline-flex" : "none";
       document.getElementById("mode-selector").style.display = "none";
