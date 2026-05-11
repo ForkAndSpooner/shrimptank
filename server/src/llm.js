@@ -73,11 +73,15 @@ Pick ONE winner. Respond in JSON only:
 }`;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
+      signal: controller.signal,
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 512, messages: [{ role: "user", content: prompt }] }),
     });
+    clearTimeout(timeout);
     const data = await res.json();
     const text = data.content?.[0]?.text;
     if (!text) { console.error("Verdict API error:", data); return mockVerdict(pitches); }
