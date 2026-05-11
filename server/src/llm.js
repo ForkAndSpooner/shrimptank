@@ -137,7 +137,7 @@ export async function generateAiOpponentPitch(market, hand) {
   return { pitch, selections: [card1, card2] };
 }
 
-(market, card1, card2) {
+function mockPitch(market, card1, card2) {
   return {
     companyName: `${card1.text.split(" ")[0]}${card2.text.split(" ")[0]}ly`.replace(/\s/g, ""),
     tagline: `Disrupting ${market} with ${card1.text} and ${card2.text}`,
